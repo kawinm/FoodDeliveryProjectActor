@@ -6,6 +6,7 @@ import java.util.concurrent.CompletionStage;
 
 import com.example.UserRegistry.User;
 import com.example.models.Order;
+import com.example.models.OrderStatus;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.ActorSystem;
@@ -156,10 +157,18 @@ public class UserRoutes {
         }))
       ),
       path("orderDelivered",()->
-        post(()-> onSuccess(orderDelivered(1000l), response -> {
-          System.out.println(response.response);
-          return complete(StatusCodes.OK);
-        }))          
+        post(()-> entity(
+          Jackson.unmarshaller(OrderStatus.class),
+          orderstatus ->
+              onSuccess(orderDelivered(orderstatus.getOrderId()), response -> {
+                log.info("Create result: {}", response.response);
+                return complete(StatusCodes.CREATED);
+              })
+            )//onSuccess(orderDelivered(1000l), response -> {
+          //System.out.println(response.response);
+          //return complete(StatusCodes.OK);
+        //})
+        )          
       ),
       path("reInitialize",()->
         post(() -> complete(StatusCodes.ACCEPTED))
