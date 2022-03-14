@@ -4,6 +4,7 @@ com/example/UserRegistry$GetUserResponse.class
 com/example/Delivery$SampleMessage.class
 com/example/UserRegistry$ActionPerformed.class
 com/example/UserRegistry$Command.class
+com/example/models/Order.class
 com/example/Constants.class
 com/example/QuickstartApp.class
 com/example/UserRegistry$User.class

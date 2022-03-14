@@ -34,6 +34,14 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
             this.message = message;
         }
     }
+
+    // Request Order Message
+    public static class RequestOrderMessage implements DeliveryCommand { 
+        String message;
+        public SampleMessage(String message) {
+            this.message = message;
+        }
+    }
     
     //Constructor
     public Delivery(ActorContext<DeliveryCommand> context, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap) {
