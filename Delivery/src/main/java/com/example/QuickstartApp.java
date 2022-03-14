@@ -92,13 +92,16 @@ public class QuickstartApp {
                     
             }
             sc.close();
+
+            ActorRef<Delivery.DeliveryCommand> deliveryActor = context.spawn(Delivery.create(items, agentRefs), "delivery_main");
+
             // Sample message send
             agentRefs.get(201l).tell(new Agent.SampleMessage("Hello from Agent 201"));
             ActorRef<UserRegistry.Command> userRegistryActor =
                 context.spawn(UserRegistry.create(), "UserRegistry");
 
             
-            UserRoutes userRoutes = new UserRoutes(context.getSystem(), userRegistryActor);
+            UserRoutes userRoutes = new UserRoutes(context.getSystem(), deliveryActor);
             startHttpServer(userRoutes.userRoutes(), context.getSystem());
 
             return Behaviors.empty();

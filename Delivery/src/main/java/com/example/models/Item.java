@@ -2,12 +2,11 @@ package com.example.models;
 
 public class Item {
 
-    public Long restId, itemId, qty, price;
+    public Long restId, itemId;
 
-    public Item(Long restId, Long itemId, Long price) {
+    public Item(Long restId, Long itemId) {
         this.restId = restId;
         this.itemId = itemId;
-        this.price = price;
     }
 
     /*
@@ -34,22 +33,6 @@ public class Item {
 
     public void setItemId(Long itemId) {
         this.itemId = itemId;
-    }
-
-    public Long getQty() {
-        return qty;
-    }
-
-    public void setQty(Long qty) {
-        this.qty = qty;
-    }
-
-    public Long getPrice() {
-        return price;
-    }
-
-    public void setPrice(Long price) {
-        this.price = price;
     }
     
 }
