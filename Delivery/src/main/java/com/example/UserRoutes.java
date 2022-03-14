@@ -9,6 +9,7 @@ import akka.actor.typed.ActorRef;
 import akka.actor.typed.ActorSystem;
 import akka.actor.typed.Scheduler;
 import akka.actor.typed.javadsl.AskPattern;
+import akka.dispatch.OnSuccess;
 import akka.http.javadsl.marshallers.jackson.Jackson;
 
 import static akka.http.javadsl.server.Directives.*;
@@ -27,11 +28,13 @@ public class UserRoutes {
   //#user-routes-class
   private final static Logger log = LoggerFactory.getLogger(UserRoutes.class);
   private final ActorRef<UserRegistry.Command> userRegistryActor;
+  private final ActorRef<Delivery.DeliveryCommand> deliveryActor;
   private final Duration askTimeout;
   private final Scheduler scheduler;
 
-  public UserRoutes(ActorSystem<?> system, ActorRef<UserRegistry.Command> userRegistryActor) {
+  public UserRoutes(ActorSystem<?> system, ActorRef<UserRegistry.Command> userRegistryActor, ActorRef<Delivery.DeliveryCommand> deliveryActor) {
     this.userRegistryActor = userRegistryActor;
+    this.deliveryActor = deliveryActor;
     scheduler = system.scheduler();
     askTimeout = system.settings().config().getDuration("my-app.routes.ask-timeout");
   }
@@ -50,6 +53,22 @@ public class UserRoutes {
 
   private CompletionStage<UserRegistry.ActionPerformed> createUser(User user) {
     return AskPattern.ask(userRegistryActor, ref -> new UserRegistry.CreateUser(user, ref), askTimeout, scheduler);
+  }
+
+  private CompletionStage<Delivery.ClientResponse> requestOrder() {
+    return null ;//AskPattern.ask(deliveryActor, ref -> new Delivery.RequestOrderMessage(order, ref), askTimeout, scheduler);
+  }
+
+  private CompletionStage<Delivery.ClientResponse> agentSignIn(Long agentId) {
+    return AskPattern.ask(deliveryActor, ref -> new Delivery.AgentSignInMessage(agentId, ref), askTimeout, scheduler);
+  }
+  
+  private CompletionStage<Delivery.ClientResponse> agentSignOut(Long agentId) {
+    return AskPattern.ask(deliveryActor, ref -> new Delivery.AgentSignOutMessage(agentId, ref), askTimeout, scheduler);
+  }
+  
+  private CompletionStage<Delivery.ClientResponse> orderDelivered(Long orderId) {
+    return AskPattern.ask(deliveryActor, ref -> new Delivery.OrderDeliveredMessage(orderId, ref), askTimeout, scheduler);
   }
 
   /**
@@ -115,14 +134,22 @@ public class UserRoutes {
         post(()-> complete(StatusCodes.ACCEPTED))
       ),
       path("agentSignIn",() ->
-        post(() -> complete(StatusCodes.ACCEPTED))
+        post(() -> onSuccess(agentSignIn(201l), response -> {
+          System.out.println(response.response);
+          return complete(StatusCodes.OK);
+        }))
       ),
       path("agentSignOut",() -> 
-        post(()-> complete(StatusCodes.ACCEPTED))
+        post(()-> onSuccess(agentSignOut(201l), response -> {
+          System.out.println(response.response);
+          return complete(StatusCodes.OK);
+        }))
       ),
       path("orderDelivered",()->
-        post(()-> complete(StatusCodes.ACCEPTED))
-          
+        post(()-> onSuccess(orderDelivered(1000l), response -> {
+          System.out.println(response.response);
+          return complete(StatusCodes.OK);
+        }))          
       ),
       path("reInitialize",()->
         post(() -> complete(StatusCodes.ACCEPTED))

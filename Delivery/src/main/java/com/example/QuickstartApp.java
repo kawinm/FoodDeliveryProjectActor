@@ -107,7 +107,7 @@ public class QuickstartApp {
                 context.spawn(UserRegistry.create(), "UserRegistry");
 
             
-            UserRoutes userRoutes = new UserRoutes(context.getSystem(), userRegistryActor);
+            UserRoutes userRoutes = new UserRoutes(context.getSystem(), userRegistryActor,deliveryActor);
             startHttpServer(userRoutes.userRoutes(), context.getSystem());
 
             return Behaviors.empty();

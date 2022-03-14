@@ -4,6 +4,7 @@ import akka.actor.typed.javadsl.ActorContext;
 
 import akka.actor.typed.ActorRef;
 
+import java.lang.ref.Cleaner.Cleanable;
 import java.util.HashMap;
 
 
@@ -14,6 +15,7 @@ import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.Receive;
 import akka.japi.pf.ReceiveBuilder;
+import akka.stream.Client;
 import akka.actor.typed.javadsl.Behaviors;
 
 
@@ -42,9 +44,10 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     public static class RequestOrderMessage implements DeliveryCommand { 
 
         Order order;
-
-        public RequestOrderMessage(Order order) {
+        ActorRef<ClientResponse> client;
+        public RequestOrderMessage(Order order, ActorRef<ClientResponse> client) {
             this.order = order;
+            this.client  = client;
         }
     }
 
@@ -52,9 +55,11 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     public static class OrderDeliveredMessage implements DeliveryCommand { 
 
         Long orderId;
-
-        public OrderDeliveredMessage(Long orderId) {
+        ActorRef<ClientResponse> client;
+        public OrderDeliveredMessage(Long orderId, ActorRef<ClientResponse> client) {
             this.orderId = orderId;
+            this.client = client;
+            
         }
     }
 
@@ -62,9 +67,10 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     public static class AgentSignInMessage implements DeliveryCommand { 
 
         Long agentId;
-
-        public AgentSignInMessage(Long agentId) {
+        ActorRef<ClientResponse> client;
+        public AgentSignInMessage(Long agentId, ActorRef<ClientResponse> client) {
             this.agentId = agentId;
+            this.client = client;
         }
     }
 
@@ -72,9 +78,20 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     public static class AgentSignOutMessage implements DeliveryCommand { 
 
         Long agentId;
-
-        public AgentSignOutMessage(Long agentId) {
+        ActorRef<ClientResponse> client;
+        public AgentSignOutMessage(Long agentId, ActorRef<ClientResponse> client) {
             this.agentId = agentId;
+            this.client = client;
+        }
+    }
+
+    // Reply messages to the client
+    public static class ClientResponse
+    {
+        String response;
+        public ClientResponse(String response)
+        {
+            this.response = response;
         }
     }
     
@@ -118,6 +135,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         orderRef.put(currentOrderId++, orderActor);
 
         System.out.println(requestOrder.order.getCustId());
+        requestOrder.client.tell(new ClientResponse("requestOrder OK"));
         return this;
      }
 
@@ -125,6 +143,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     public Behavior<DeliveryCommand> onOrderDeliveredMessage(OrderDeliveredMessage orderDelivered) {
 
         System.out.println(orderDelivered.orderId);
+        orderDelivered.client.tell(new ClientResponse("Order Delivered"));
         return this;
      }
 
@@ -135,7 +154,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
 
         // SignIn Message send
         currentAgent.tell(new Agent.AgentSignInMessage(agentSignIn.agentId));
-
+        agentSignIn.client.tell(new ClientResponse("Agent" + agentSignIn.agentId + " signed in"));
         System.out.println(agentSignIn.agentId);
         return this;
      }
@@ -147,7 +166,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
 
         // Signout message send
         currentAgent.tell(new Agent.AgentSignOutMessage(agentSignOut.agentId));
-
+        agentSignOut.client.tell(new ClientResponse("Agent" + agentSignOut.agentId + " signed out"));
         System.out.println(agentSignOut.agentId);
         return this;
      }
