@@ -5,6 +5,8 @@ import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 
 import com.example.UserRegistry.User;
+import com.example.models.Order;
+
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.ActorSystem;
 import akka.actor.typed.Scheduler;
@@ -55,8 +57,8 @@ public class UserRoutes {
     return AskPattern.ask(userRegistryActor, ref -> new UserRegistry.CreateUser(user, ref), askTimeout, scheduler);
   }
 
-  private CompletionStage<Delivery.ClientResponse> requestOrder() {
-    return null ;//AskPattern.ask(deliveryActor, ref -> new Delivery.RequestOrderMessage(order, ref), askTimeout, scheduler);
+  private CompletionStage<Delivery.ClientResponse> requestOrder(Order order) {
+    return AskPattern.ask(deliveryActor, ref -> new Delivery.RequestOrderMessage(order, ref), askTimeout, scheduler);
   }
 
   private CompletionStage<Delivery.ClientResponse> agentSignIn(Long agentId) {
@@ -131,7 +133,15 @@ public class UserRoutes {
       ),
       /* Above block to be deleted*/
       path("requestOrder",() -> 
-        post(()-> complete(StatusCodes.ACCEPTED))
+        post(()->  entity(
+          Jackson.unmarshaller(Order.class),
+          order ->
+              onSuccess(requestOrder(order), response -> {
+                log.info("Create result: {}", response.response);
+                return complete(StatusCodes.CREATED);
+              })
+            )
+        )
       ),
       path("agentSignIn",() ->
         post(() -> onSuccess(agentSignIn(201l), response -> {

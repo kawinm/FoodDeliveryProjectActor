@@ -100,6 +100,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         super(context);
         this.itemMap = itemMap;
         this.agentRef = agentRef;
+        this.orderRef = new HashMap<>();
     }
 
     // Create method to spawn an actor
@@ -135,7 +136,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         orderRef.put(currentOrderId++, orderActor);
 
         System.out.println(requestOrder.order.getCustId());
-        requestOrder.client.tell(new ClientResponse("requestOrder OK"));
+        requestOrder.client.tell(new ClientResponse("requestOrder OK" + requestOrder.order.getCustId()));
         return this;
      }
 

@@ -1,10 +1,16 @@
 package com.example.models;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class Order {
 
     public Long restId, itemId, qty, custId;
-
-    public Order(Long restId, Long itemId, Long qty, Long custId) {
+    @JsonCreator
+    public Order(@JsonProperty("restId") Long restId, 
+    @JsonProperty("itemId") Long itemId, 
+    @JsonProperty("qty") Long qty, 
+    @JsonProperty("custId") Long custId) {
         this.restId = restId;
         this.itemId = itemId;
         this.qty    = qty;
