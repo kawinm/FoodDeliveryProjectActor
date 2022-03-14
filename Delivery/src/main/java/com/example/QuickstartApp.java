@@ -47,12 +47,16 @@ public class QuickstartApp {
     // #start-http-server
 
     public static void main(String[] args) throws Exception {
+
         //#server-bootstrapping
         Behavior<NotUsed> rootBehavior = Behaviors.setup(context -> {
+
             File file = new File(args[0]);
             Scanner sc = new Scanner(file);
             HashMap<Long,ActorRef<Agent.AgentCommand>> agentRefs = new HashMap<>();
-            List<Item> items = new ArrayList<>();
+            HashMap<Item, Long> itemMap = new HashMap<>();
+            
+
             int count = 0;
             while (sc.hasNextLine()) {
 
@@ -79,8 +83,8 @@ public class QuickstartApp {
                         price  = Long.parseLong(splited2[1]);
                         qty    = Long.parseLong(splited2[2]);
                         
-                        Item item = new Item(restId, itemId, price);
-                        items.add(item);  
+                        Item item = new Item(restId, itemId);
+                        itemMap.put(item, price);  
                     }
                 }
                 if (count == 1) 
@@ -93,7 +97,7 @@ public class QuickstartApp {
             }
             sc.close();
 
-            ActorRef<Delivery.DeliveryCommand> deliveryActor = context.spawn(Delivery.create(items, agentRefs), "delivery_main");
+            ActorRef<Delivery.DeliveryCommand> deliveryActor = context.spawn(Delivery.create(itemMap, agentRefs), "delivery_main");
 
             // Sample message send
             agentRefs.get(201l).tell(new Agent.SampleMessage("Hello from Agent 201"));
@@ -101,7 +105,7 @@ public class QuickstartApp {
                 context.spawn(UserRegistry.create(), "UserRegistry");
 
             
-            UserRoutes userRoutes = new UserRoutes(context.getSystem(), deliveryActor);
+            UserRoutes userRoutes = new UserRoutes(context.getSystem(), userRegistryActor);
             startHttpServer(userRoutes.userRoutes(), context.getSystem());
 
             return Behaviors.empty();

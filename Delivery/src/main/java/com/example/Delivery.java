@@ -2,7 +2,10 @@ package com.example;
 
 import akka.actor.typed.javadsl.ActorContext;
 
+import akka.actor.typed.ActorRef;
+
 import java.util.HashMap;
+
 
 import com.example.models.Item;
 
@@ -18,7 +21,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     //Define members 
     HashMap<Item, Long> itemMap;
     HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap;
-    HashMap<Long, ActorRef<FullFillOrder.AgentCommand>> orderMap;
+    HashMap<Long, ActorRef<FullFillOrder.FullFillOrderCommand>> orderMap;
 
     // Define the message type which 
     // actor can process
@@ -40,9 +43,9 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     }
 
     // Create method to spawn an actor
-    public static Behavior<DeliveryCommand> create(Long DeliveryId, int status) {   
+    public static Behavior<DeliveryCommand> create(HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap) {   
 
-        return Behaviors.setup(context -> new Delivery(context,DeliveryId,status));
+        return Behaviors.setup(context -> new Delivery(context,itemMap, agentMap));
     }
 
     //Create Receive Method
