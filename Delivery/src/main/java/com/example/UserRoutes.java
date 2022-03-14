@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 
 import com.example.UserRegistry.User;
+import com.example.models.AgentStatus;
 import com.example.models.Order;
 import com.example.models.OrderStatus;
 
@@ -145,16 +146,35 @@ public class UserRoutes {
         )
       ),
       path("agentSignIn",() ->
-        post(() -> onSuccess(agentSignIn(201l), response -> {
-          System.out.println(response.response);
-          return complete(StatusCodes.OK);
-        }))
+        post(() -> entity(
+          Jackson.unmarshaller(AgentStatus.class),
+          agentstatus ->
+              onSuccess(orderDelivered(agentstatus.getAgentId()), response -> {
+                log.info("Create result: {}", response.response);
+                return complete(StatusCodes.CREATED);
+              })
+            )
+        //onSuccess(agentSignIn(201l), response -> {
+        //  System.out.println(response.response);
+        //  return complete(StatusCodes.OK);
+        //})
+        )
       ),
       path("agentSignOut",() -> 
-        post(()-> onSuccess(agentSignOut(201l), response -> {
-          System.out.println(response.response);
-          return complete(StatusCodes.OK);
-        }))
+        post(()-> entity(
+          Jackson.unmarshaller(AgentStatus.class),
+          agentstatus ->
+              onSuccess(orderDelivered(agentstatus.getAgentId()), response -> {
+                log.info("Create result: {}", response.response);
+                return complete(StatusCodes.CREATED);
+              })
+            )
+        
+          //onSuccess(agentSignOut(201l), response -> {
+          //System.out.println(response.response);
+          //return complete(StatusCodes.OK);
+          //})
+        )
       ),
       path("orderDelivered",()->
         post(()-> entity(
