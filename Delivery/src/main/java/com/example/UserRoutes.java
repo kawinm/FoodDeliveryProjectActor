@@ -57,7 +57,10 @@ public class UserRoutes {
    */
   //#all-routes
   public Route userRoutes() {
-    return pathPrefix("users", () ->
+    return 
+    concat ( 
+      /* TO BE DELETED */
+      pathPrefix("users", () ->
         concat(
             //#users-get-delete
             pathEnd(() ->
@@ -106,6 +109,37 @@ public class UserRoutes {
             )
             //#users-get-post
         )
+      ),
+      /* Above block to be deleted*/
+      path("requestOrder",() -> 
+        post(()-> complete(StatusCodes.ACCEPTED))
+      ),
+      path("agentSignIn",() ->
+        post(() -> complete(StatusCodes.ACCEPTED))
+      ),
+      path("agentSignOut",() -> 
+        post(()-> complete(StatusCodes.ACCEPTED))
+      ),
+      path("orderDelivered",()->
+        post(()-> complete(StatusCodes.ACCEPTED))
+          
+      ),
+      path("reInitialize",()->
+        post(() -> complete(StatusCodes.ACCEPTED))
+      ),
+      path(PathMatchers.segment("agent")
+        .slash(PathMatchers.integerSegment()), userId -> 
+        {
+          return complete("Hello user " + userId);
+        }
+      ),
+      path(PathMatchers.segment("order")
+        .slash(PathMatchers.integerSegment()), orderId -> 
+        {
+          return complete("Hello order " + orderId);
+        }
+      )
+                                
     );
   }
   //#all-routes
