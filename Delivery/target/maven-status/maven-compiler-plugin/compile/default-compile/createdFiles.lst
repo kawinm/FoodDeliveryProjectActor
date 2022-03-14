@@ -27,4 +27,5 @@ com/example/Agent.class
 com/example/models/Item.class
 com/example/Delivery$RequestOrderMessage.class
 com/example/UserRegistry$CreateUser.class
+com/example/Delivery$OrderDeliveredMessage.class
 com/example/UserRegistry$GetUser.class

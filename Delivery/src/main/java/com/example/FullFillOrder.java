@@ -67,6 +67,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     public Receive<FullFillOrderCommand> createReceive() {
        return newReceiveBuilder()
        .onMessage(SampleMessage.class, this::onSampleMessage)
+       .onMessage(OrderDeliveredMessage.class, this::onOrderDeliveredMessage)
        .build();
     }
 

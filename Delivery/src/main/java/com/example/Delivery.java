@@ -48,6 +48,16 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         }
     }
 
+    // Order Delivered Message
+    public static class OrderDeliveredMessage implements DeliveryCommand { 
+
+        Long orderId;
+
+        public OrderDeliveredMessage(Long orderId) {
+            this.orderId = orderId;
+        }
+    }
+
     // Agent Signin Message
     public static class AgentSignInMessage implements DeliveryCommand { 
 
@@ -87,6 +97,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
        return newReceiveBuilder()
        .onMessage(SampleMessage.class, this::onSampleMessage)
        .onMessage(RequestOrderMessage.class, this::onRequestOrderMessage)
+       .onMessage(OrderDeliveredMessage.class, this::onOrderDeliveredMessage)
        .onMessage(AgentSignInMessage.class, this::onAgentSignInMessage)
        .onMessage(AgentSignOutMessage.class, this::onAgentSignOutMessage)
        .build();
@@ -107,6 +118,13 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         orderRef.put(currentOrderId++, orderActor);
 
         System.out.println(requestOrder.order.getCustId());
+        return this;
+     }
+
+      // Define Message and Signal Handler for Order Delivered Message
+    public Behavior<DeliveryCommand> onOrderDeliveredMessage(OrderDeliveredMessage orderDelivered) {
+
+        System.out.println(orderDelivered.orderId);
         return this;
      }
 
@@ -133,4 +151,5 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         System.out.println(agentSignOut.agentId);
         return this;
      }
+
 }
