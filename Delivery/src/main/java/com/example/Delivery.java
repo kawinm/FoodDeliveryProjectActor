@@ -22,6 +22,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     HashMap<Item, Long> itemMap;
     HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap;
     HashMap<Long, ActorRef<FullFillOrder.FullFillOrderCommand>> orderMap;
+    
 
     // Define the message type which 
     // actor can process
