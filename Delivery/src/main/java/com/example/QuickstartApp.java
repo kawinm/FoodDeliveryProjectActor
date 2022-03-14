@@ -15,8 +15,15 @@ import akka.actor.typed.javadsl.Adapter;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.ActorSystem;
 
+import java.io.File;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Scanner;
 import java.util.concurrent.CompletionStage;
+
+import com.example.models.Item;
 
 //#main-class
 public class QuickstartApp {
@@ -42,9 +49,55 @@ public class QuickstartApp {
     public static void main(String[] args) throws Exception {
         //#server-bootstrapping
         Behavior<NotUsed> rootBehavior = Behaviors.setup(context -> {
+            File file = new File(args[0]);
+            Scanner sc = new Scanner(file);
+            HashMap<Long,ActorRef<Agent.AgentCommand>> agentRefs = new HashMap<>();
+            List<Item> items = new ArrayList<>();
+            int count = 0;
+            while (sc.hasNextLine()) {
+
+                String str = sc.nextLine();
+                System.out.println(str);
+                String[] splited = str.split("\\s+");
+        
+                if (splited[0].indexOf('*') > -1) {
+                    count += 1;
+                    continue;
+                }
+                if(count==0)
+                {
+                    Long restId = Long.parseLong(splited[0]);
+                    int restNum = Integer.parseInt(splited[1]);
+                    for (int i = 0; i < restNum; i++) {
+    
+                        String str2 = sc.nextLine();
+                        String[] splited2 = str2.split("\\s+");
+                        
+                        Long itemId, price, qty;
+    
+                        itemId = Long.parseLong(splited2[0]);
+                        price  = Long.parseLong(splited2[1]);
+                        qty    = Long.parseLong(splited2[2]);
+                        
+                        Item item = new Item(restId, itemId, price);
+                        items.add(item);  
+                    }
+                }
+                if (count == 1) 
+                {
+                    Long agentId = Long.parseLong(str);
+                    ActorRef<Agent.AgentCommand> agentActor = context.spawn(Agent.create(agentId, Constants.AGENT_SIGNED_OUT), "agent_"+agentId);
+                    agentRefs.put(agentId,agentActor);
+                }
+                    
+            }
+            sc.close();
+            // Sample message send
+            agentRefs.get(201l).tell(new Agent.SampleMessage("Hello from Agent 201"));
             ActorRef<UserRegistry.Command> userRegistryActor =
                 context.spawn(UserRegistry.create(), "UserRegistry");
 
+            
             UserRoutes userRoutes = new UserRoutes(context.getSystem(), userRegistryActor);
             startHttpServer(userRoutes.userRoutes(), context.getSystem());
 
