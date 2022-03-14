@@ -6,14 +6,23 @@ import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.Receive;
 import akka.japi.pf.ReceiveBuilder;
 import akka.actor.typed.javadsl.Behaviors;
+import akka.actor.typed.ActorRef;
+
+
+import java.util.HashMap;
+
+import com.example.models.Item;
+import com.example.models.Order;
 
 
 public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderCommand> {
     
     //Define members 
-    Long FullFillOrderId;
+    Long orderId;
+    Order order;
     int status;
-    int orderId;
+    HashMap<Item, Long> itemMap;
+     HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap;
 
     // Define the message type which 
     // actor can process
@@ -26,19 +35,31 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
             this.message = message;
         }
     }
+
+    // Define Order Delivered
+    public static class OrderDeliveredMessage implements FullFillOrderCommand { 
+
+        Long orderId;
+
+        public OrderDeliveredMessage(Long orderId) {
+            this.orderId = orderId;
+        }
+    }
     
     //Constructor
-    public FullFillOrder(ActorContext<FullFillOrderCommand> context, Long FullFillOrderId, int status) {
+    public FullFillOrder(ActorContext<FullFillOrderCommand> context, Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap) {
         super(context);
-        this.FullFillOrderId = FullFillOrderId;
+        this.orderId = orderId;
+        this.order = order;
         this.status = status;
-        this.orderId = -1;
+        this.itemMap = itemMap;
+        this.agentMap = agentMap;
     }
 
     // Create method to spawn an actor
-    public static Behavior<FullFillOrderCommand> create(Long FullFillOrderId, int status) {   
+    public static Behavior<FullFillOrderCommand> create(Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap) {   
 
-        return Behaviors.setup(context -> new FullFillOrder(context,FullFillOrderId,status));
+        return Behaviors.setup(context -> new FullFillOrder(context, orderId, order, status, itemMap, agentMap));
     }
 
     //Create Receive Method
@@ -55,5 +76,12 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
        System.out.println(sampleMessage.message);
        return this;
     }
+
+    // Define Message and Signal Handler for Order Delivered Message
+    public Behavior<FullFillOrderCommand> onOrderDeliveredMessage(OrderDeliveredMessage orderDelivered) {
+
+        System.out.println(orderDelivered.orderId);
+        return this;
+     }
 
 }

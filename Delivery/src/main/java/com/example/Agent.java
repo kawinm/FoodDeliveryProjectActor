@@ -10,10 +10,9 @@ import akka.actor.typed.javadsl.Behaviors;
 
 public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     
-    //Define members 
+    // Define members 
     Long agentId;
     int status;
-    int orderId;
 
     // Define the message type which 
     // actor can process
@@ -26,13 +25,33 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
             this.message = message;
         }
     }
+
+    // Agent Signin Message
+    public static class AgentSignInMessage implements AgentCommand { 
+
+        Long agentId;
+
+        public AgentSignInMessage(Long agentId) {
+            this.agentId = agentId;
+        }
+    }
+
+    // Agent Signout Message
+    public static class AgentSignOutMessage implements AgentCommand { 
+
+        Long agentId;
+
+        public AgentSignOutMessage(Long agentId) {
+            this.agentId = agentId;
+        }
+    }
+    
     
     //Constructor
     public Agent(ActorContext<AgentCommand> context, Long agentId, int status) {
         super(context);
         this.agentId = agentId;
         this.status = status;
-        this.orderId = -1;
     }
 
     // Create method to spawn an actor
@@ -46,6 +65,8 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     public Receive<AgentCommand> createReceive() {
        return newReceiveBuilder()
        .onMessage(SampleMessage.class, this::onSampleMessage)
+       .onMessage(AgentSignInMessage.class, this::onAgentSignInMessage)
+       .onMessage(AgentSignOutMessage.class, this::onAgentSignOutMessage)
        .build();
     }
 
@@ -56,4 +77,17 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
        return this;
     }
 
+    // Define Signal Handler for Agent SignIn Message
+    public Behavior<AgentCommand> onAgentSignInMessage(AgentSignInMessage agentSignIn) {
+
+        System.out.println(agentSignIn.agentId);
+        return this;
+     }
+
+     // Define Signal Handler for Agent SignOut Message
+    public Behavior<AgentCommand> onAgentSignOutMessage(AgentSignOutMessage agentSignOut) {
+
+        System.out.println(agentSignOut.agentId);
+        return this;
+     }
 }

@@ -101,6 +101,8 @@ public class QuickstartApp {
 
             // Sample message send
             agentRefs.get(201l).tell(new Agent.SampleMessage("Hello from Agent 201"));
+
+            // To Delete $#%%
             ActorRef<UserRegistry.Command> userRegistryActor =
                 context.spawn(UserRegistry.create(), "UserRegistry");
 
