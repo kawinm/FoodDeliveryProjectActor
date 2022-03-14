@@ -14,6 +14,8 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     Long agentId;
     int status;
 
+    int SignOutLock;
+    
     // Define the message type which 
     // actor can process
     interface AgentCommand {}
@@ -24,6 +26,12 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
         public SampleMessage(String message) {
             this.message = message;
         }
+    }
+
+    // Get Agent Status Message
+    public static class getAgentStatusMessage implements AgentCommand { 
+
+        public getAgentStatusMessage() { }
     }
 
     // Agent Signin Message
@@ -52,6 +60,7 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
         super(context);
         this.agentId = agentId;
         this.status = status;
+        this.SignOutLock = 0;
     }
 
     // Create method to spawn an actor
@@ -65,6 +74,7 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     public Receive<AgentCommand> createReceive() {
        return newReceiveBuilder()
        .onMessage(SampleMessage.class, this::onSampleMessage)
+       .onMessage(getAgentStatusMessage.class, this::onGetAgentStatusMessage)
        .onMessage(AgentSignInMessage.class, this::onAgentSignInMessage)
        .onMessage(AgentSignOutMessage.class, this::onAgentSignOutMessage)
        .build();
@@ -78,14 +88,26 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     }
 
     // Define Signal Handler for Agent SignIn Message
-    public Behavior<AgentCommand> onAgentSignInMessage(AgentSignInMessage agentSignIn) {
+    public Behavior<AgentCommand> onGetAgentStatusMessage(getAgentStatusMessage agentStatus) {
 
         System.out.println(agentSignIn.agentId);
         return this;
      }
 
+    // Define Signal Handler for Agent SignIn Message
+    public Behavior<AgentCommand> onAgentSignInMessage(AgentSignInMessage agentSignIn) {
+
+        if (status == Constants.AGENT_SIGNED_OUT) {
+            status = Constants.AGENT_AVAILABLE;
+        }
+
+        return this;
+     }
+
      // Define Signal Handler for Agent SignOut Message
     public Behavior<AgentCommand> onAgentSignOutMessage(AgentSignOutMessage agentSignOut) {
+
+        this.SignOutLock = 0;
 
         System.out.println(agentSignOut.agentId);
         return this;
