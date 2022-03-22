@@ -214,7 +214,7 @@ public class DeliveryRoutes {
             }
             else
             {
-              return complete("ERROR");
+              return complete(StatusCodes.NOT_FOUND);
             }
           });
         }
