@@ -1,6 +1,8 @@
 com/example/UserRegistry$Users.class
+com/example/Agent$getAgentStatusMessage.class
 com/example/FullFillOrder.class
 com/example/Delivery$AgentSignOutMessage.class
+com/example/models/OrderStatus.class
 com/example/UserRegistry$GetUserResponse.class
 com/example/Delivery$SampleMessage.class
 com/example/UserRegistry$ActionPerformed.class
@@ -9,6 +11,7 @@ com/example/models/Order.class
 com/example/Constants.class
 com/example/Delivery$AgentSignInMessage.class
 com/example/QuickstartApp.class
+com/example/Delivery$ClientResponse.class
 com/example/UserRegistry$User.class
 com/example/UserRegistry$GetUsers.class
 com/example/Agent$AgentCommand.class
@@ -22,6 +25,7 @@ com/example/UserRegistry.class
 com/example/Agent$SampleMessage.class
 com/example/UserRoutes.class
 com/example/FullFillOrder$OrderDeliveredMessage.class
+com/example/models/AgentStatus.class
 com/example/FullFillOrder$FullFillOrderCommand.class
 com/example/Agent.class
 com/example/models/Item.class
