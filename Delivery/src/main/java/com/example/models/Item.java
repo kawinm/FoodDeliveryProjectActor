@@ -34,5 +34,21 @@ public class Item {
     public void setItemId(Long itemId) {
         this.itemId = itemId;
     }
+
+    //Compare only account numbers
+    @Override
+    public int hashCode(){
+        String hash_string = ""+this.itemId+this.restId+"";
+        return hash_string.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        Item item  = (Item) obj;
+        System.out.print("hhh"+this.restId+"lll"+item.getRestId());
+        if (this.restId.equals(item.getRestId()) && this.itemId.equals(item.getItemId()))
+            return true;
+        return false;
+    }
     
 }

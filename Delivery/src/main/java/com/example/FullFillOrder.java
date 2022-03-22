@@ -88,14 +88,18 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     
     public Behavior<FullFillOrderCommand> onInitiateOrder(InitiateOrder initiateOrder)
     {
-        int amount = 10;
+        Long  price = 0l;
+        
+        Item item = new Item(this.order.restId,this.order.itemId);
+        price = this.itemMap.get(item);
+        
         String wallet_request_payload = "{ \"custId\" : " + this.order.getCustId() 
-                                        + ", \"amount\" : " + amount + " }";
+                                        + ", \"amount\" : " + price + " }";
         String restuarant_request = "{ \"restId\" : " + this.order.getRestId() 
                                     + ", \"itemId\" : " + this.order.getItemId() 
                                     + ", \"qty\" : " + this.order.getItemId() + "}";
-
-        HttpRequest request = HttpRequest.newBuilder()
+        System.out.println(price);
+        /*HttpRequest request = HttpRequest.newBuilder()
                             .uri(URI.create("http://localhost:8082/deductBalance"))
                                     .header("Content-Type","application/json")
                                     .POST(HttpRequest.BodyPublishers.ofString(wallet_request_payload))
@@ -115,7 +119,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
                             
                         
         System.out.println(response.statusCode());
-        System.out.println(response.body());
+        System.out.println(response.body());*/
         return this;
     }
 
