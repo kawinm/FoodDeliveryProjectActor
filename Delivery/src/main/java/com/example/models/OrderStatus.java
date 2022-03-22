@@ -9,10 +9,10 @@ public class OrderStatus {
     String status;
 
     @JsonCreator
-    public OrderStatus( @JsonProperty("orderId") Long orderId)
+    public OrderStatus( @JsonProperty("orderId") Long orderId, @JsonProperty("status") String status)
     {
         this.orderId = orderId;
-        this.status = "";
+        this.status = status;
     }
     
     public Long getOrderId() {

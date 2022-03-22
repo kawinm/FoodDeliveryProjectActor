@@ -10,6 +10,7 @@ import java.util.HashMap;
 
 import com.example.models.Item;
 import com.example.models.Order;
+import com.example.models.OrderStatus;
 
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.AbstractBehavior;
@@ -89,9 +90,18 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     public static class OrderStatusMessage implements DeliveryCommand { 
 
         Long orderId;
-        ActorRef<ClientBooleanResponse> client;
-        public OrderStatusMessage(Long orderId, ActorRef<ClientBooleanResponse> client) {
+        ActorRef<FullFillOrder.ClientStatusResponse> client;
+        public OrderStatusMessage(Long orderId, ActorRef<FullFillOrder.ClientStatusResponse> client) {
             this.orderId = orderId;
+            this.client = client;
+        }
+    }
+
+    // Reinitialize Message
+    public static class ReinitializeMessage implements DeliveryCommand { 
+
+        ActorRef<ClientResponse> client;
+        public ReinitializeMessage(ActorRef<ClientResponse> client) {
             this.client = client;
         }
     }
@@ -106,12 +116,14 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         }
     }
 
-    public static class ClientBooleanResponse
-    {
+    public static class ClientStatusResponse {
+
         boolean response;
-        public ClientBooleanResponse(boolean response)
-        {
+        OrderStatus orderStatusResponse;
+        
+        public ClientStatusResponse(boolean response, OrderStatus orderStatusResponse) {
             this.response = response;
+            this.orderStatusResponse = orderStatusResponse;
         }
     }
     
@@ -139,6 +151,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
        .onMessage(AgentSignInMessage.class, this::onAgentSignInMessage)
        .onMessage(AgentSignOutMessage.class, this::onAgentSignOutMessage)
        .onMessage(OrderStatusMessage.class, this::onOrderStatusMessage)
+       .onMessage(ReinitializeMessage.class, this::onReinitializeMessage)
        .build();
     }
 
@@ -198,15 +211,28 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     public Behavior<DeliveryCommand> onOrderStatusMessage(OrderStatusMessage orderStatus) {
 
         Long orderId = orderStatus.orderId;
-        if(orderRef.containsKey(orderId))
-        {
+
+        if (orderRef.containsKey(orderId)) {
             ActorRef<FullFillOrder.FullFillOrderCommand> order = this.orderRef.get(orderId);
-            orderStatus.client.tell(new ClientBooleanResponse(true));
-            
-            
+            order.tell(new FullFillOrder.OrderStatusMessage(orderId, orderStatus.client));
+            return this;            
         }
         
-        orderStatus.client.tell(new ClientBooleanResponse(false));
+        orderStatus.client.tell(new FullFillOrder.ClientStatusResponse(false, null));
+        return this;
+     }
+
+    // Define Signal Handler for Order status Message
+    public Behavior<DeliveryCommand> onReinitializeMessage(ReinitializeMessage reinit) {
+
+        for (Long orderId = 1000L; orderId < currentOrderId; orderId++) {
+            orderRef.get(orderId).tell(new FullFillOrder.StopMessage());
+            orderRef.remove(orderId);
+        }
+
+        currentOrderId = 1000L;
+        reinit.client.tell(new ClientResponse(""));
+        
         return this;
      }
 

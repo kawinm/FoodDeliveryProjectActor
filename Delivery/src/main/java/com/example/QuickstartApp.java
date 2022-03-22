@@ -87,8 +87,7 @@ public class QuickstartApp {
                         itemMap.put(item, price);  
                     }
                 }
-                if (count == 1) 
-                {
+                if (count == 1) {
                     Long agentId = Long.parseLong(str);
                     ActorRef<Agent.AgentCommand> agentActor = context.spawn(Agent.create(agentId, Constants.AGENT_SIGNED_OUT), "agent_"+agentId);
                     agentRefs.put(agentId,agentActor);

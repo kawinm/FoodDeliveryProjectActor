@@ -7,6 +7,7 @@ import akka.actor.typed.javadsl.Receive;
 import akka.japi.pf.ReceiveBuilder;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.ActorRef;
+import akka.actor.typed.PostStop;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -16,6 +17,7 @@ import java.io.*;
 
 import com.example.models.Item;
 import com.example.models.Order;
+import com.example.models.OrderStatus;
 
 
 public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderCommand> {
@@ -48,9 +50,39 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
             this.orderId = orderId;
         }
     }
+
+    // Define Order Status Message
+    public static class OrderStatusMessage implements FullFillOrderCommand { 
+
+        Long orderId;
+        ActorRef<ClientStatusResponse> client;
+        public OrderStatusMessage(Long orderId, ActorRef<ClientStatusResponse> client) {
+            this.orderId = orderId;
+            this.client = client;
+        }
+    }
+
+    // Define Order Status Message
+    public static class StopMessage implements FullFillOrderCommand { 
+
+
+        public StopMessage() {
+        }
+    }
     
     public static class InitiateOrder implements FullFillOrderCommand{
 
+    }
+
+    public static class ClientStatusResponse {
+
+        boolean response;
+        OrderStatus orderStatusResponse;
+        
+        public ClientStatusResponse(boolean response, OrderStatus orderStatusResponse) {
+            this.response = response;
+            this.orderStatusResponse = orderStatusResponse;
+        }
     }
     
     //Constructor
@@ -76,6 +108,8 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
        .onMessage(SampleMessage.class, this::onSampleMessage)
        .onMessage(OrderDeliveredMessage.class, this::onOrderDeliveredMessage)
        .onMessage(InitiateOrder.class, this::onInitiateOrder)
+       .onMessage(OrderStatusMessage.class, this::onOrderStatusMessage)
+       .onMessage(StopMessage.class, this::onPostStop)
        .build();
     }
 
@@ -129,5 +163,27 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         System.out.println(orderDelivered.orderId);
         return this;
      }
+
+    // Define Signal Handler for Order status Message
+    public Behavior<FullFillOrderCommand> onOrderStatusMessage(OrderStatusMessage orderStatus) {
+        
+        OrderStatus statusResponse;
+        if (status == Constants.ORDER_ASSIGNED) {
+            statusResponse = new OrderStatus(orderId, "assigned");
+        }
+        else if (status == Constants.ORDER_UNASSIGNED) {
+            statusResponse = new OrderStatus(orderId, "unassigned");
+        }
+        else {
+            statusResponse = new OrderStatus(orderId, "delivered");
+        }
+        orderStatus.client.tell(new ClientStatusResponse(true, statusResponse));
+        return this;
+     }
+
+     private Behavior<FullFillOrderCommand> onPostStop(StopMessage stop) {
+        getContext().getSystem().log().info("Master Control Program stopped");
+        return Behaviors.stopped();
+      }
 
 }

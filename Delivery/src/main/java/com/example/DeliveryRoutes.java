@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
  */
 //#user-routes-class
 public class DeliveryRoutes {
+
   //#user-routes-class
   private final static Logger log = LoggerFactory.getLogger(DeliveryRoutes.class);
   private final ActorRef<UserRegistry.Command> userRegistryActor;
@@ -74,10 +75,15 @@ public class DeliveryRoutes {
   private CompletionStage<Delivery.ClientResponse> orderDelivered(Long orderId) {
     return AskPattern.ask(deliveryActor, ref -> new Delivery.OrderDeliveredMessage(orderId, ref), askTimeout, scheduler);
   }
-  private CompletionStage<Delivery.ClientBooleanResponse> orderStatus(Long orderId)
-  {
+
+  private CompletionStage<FullFillOrder.ClientStatusResponse> orderStatus(Long orderId) {
     return AskPattern.ask(deliveryActor,ref -> new Delivery.OrderStatusMessage(orderId, ref),askTimeout,scheduler);
   }
+
+  private CompletionStage<Delivery.ClientResponse> reInitialize() {
+    return AskPattern.ask(deliveryActor, ref -> new Delivery.ReinitializeMessage(ref), askTimeout, scheduler);
+  }
+  
 
   /**
    * This method creates one route (of possibly many more that will be part of your Web App)
@@ -195,7 +201,10 @@ public class DeliveryRoutes {
         )          
       ),
       path("reInitialize",()->
-        post(() -> complete(StatusCodes.ACCEPTED))
+        post(() -> onSuccess(reInitialize(), response -> {
+          //log.info("Create result: {}", response.response);
+          return complete(StatusCodes.CREATED);
+        }))
       ),
       path(PathMatchers.segment("agent")
         .slash(PathMatchers.integerSegment()), userId -> 
@@ -208,12 +217,10 @@ public class DeliveryRoutes {
         {
           //return complete("Hello order " + orderId);
           return onSuccess( orderStatus(orderId), response -> {
-            if(response.response==true)
-            {
-              return complete(StatusCodes.NOT_FOUND);
+            if (response.response == true) {
+              return complete(StatusCodes.OK, response.orderStatusResponse, Jackson.marshaller());
             }
-            else
-            {
+            else {
               return complete(StatusCodes.NOT_FOUND);
             }
           });
