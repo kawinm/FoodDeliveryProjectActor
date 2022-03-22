@@ -137,6 +137,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
 
         System.out.println(requestOrder.order.getCustId());
         requestOrder.client.tell(new ClientResponse("requestOrder OK" + requestOrder.order.getCustId()));
+        orderActor.tell(new FullFillOrder.InitiateOrder());
         return this;
      }
 

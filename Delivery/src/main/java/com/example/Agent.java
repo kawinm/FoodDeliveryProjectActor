@@ -90,7 +90,6 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     // Define Signal Handler for Agent SignIn Message
     public Behavior<AgentCommand> onGetAgentStatusMessage(getAgentStatusMessage agentStatus) {
 
-    
         return this;
      }
 
