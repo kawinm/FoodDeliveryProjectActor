@@ -7,9 +7,12 @@ import akka.actor.typed.javadsl.Receive;
 import akka.japi.pf.ReceiveBuilder;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.ActorRef;
-
-
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.HashMap;
+import java.net.URI;
+import java.io.*;
 
 import com.example.models.Item;
 import com.example.models.Order;
@@ -22,7 +25,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     Order order;
     int status;
     HashMap<Item, Long> itemMap;
-     HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap;
+    HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap;
 
     // Define the message type which 
     // actor can process
@@ -46,6 +49,9 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         }
     }
     
+    public static class InitiateOrder implements FullFillOrderCommand{
+
+    }
     
     //Constructor
     public FullFillOrder(ActorContext<FullFillOrderCommand> context, Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap) {
@@ -69,6 +75,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
        return newReceiveBuilder()
        .onMessage(SampleMessage.class, this::onSampleMessage)
        .onMessage(OrderDeliveredMessage.class, this::onOrderDeliveredMessage)
+       .onMessage(InitiateOrder.class, this::onInitiateOrder)
        .build();
     }
 
@@ -77,6 +84,39 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
 
        System.out.println(sampleMessage.message);
        return this;
+    }
+    
+    public Behavior<FullFillOrderCommand> onInitiateOrder(InitiateOrder initiateOrder)
+    {
+        int amount = 10;
+        String wallet_request_payload = "{ \"custId\" : " + this.order.getCustId() 
+                                        + ", \"amount\" : " + amount + " }";
+        String restuarant_request = "{ \"restId\" : " + this.order.getRestId() 
+                                    + ", \"itemId\" : " + this.order.getItemId() 
+                                    + ", \"qty\" : " + this.order.getItemId() + "}";
+
+        HttpRequest request = HttpRequest.newBuilder()
+                            .uri(URI.create("http://localhost:8082/deductBalance"))
+                                    .header("Content-Type","application/json")
+                                    .POST(HttpRequest.BodyPublishers.ofString(wallet_request_payload))
+                                    .build();
+                        
+                                //HttpClient client = HttpClient.newHttpClient();
+        HttpResponse response = null;
+        try
+        {
+            HttpClient client = HttpClient.newHttpClient();
+            response = client.send(request,HttpResponse.BodyHandlers.ofString());
+        }
+        catch(Exception e)
+        {
+            e.printStackTrace();
+        }
+                            
+                        
+        System.out.println(response.statusCode());
+        System.out.println(response.body());
+        return this;
     }
 
     // Define Message and Signal Handler for Order Delivered Message

@@ -28,15 +28,15 @@ import org.slf4j.LoggerFactory;
  * Routes can be defined in separated classes like shown in here
  */
 //#user-routes-class
-public class UserRoutes {
+public class DeliveryRoutes {
   //#user-routes-class
-  private final static Logger log = LoggerFactory.getLogger(UserRoutes.class);
+  private final static Logger log = LoggerFactory.getLogger(DeliveryRoutes.class);
   private final ActorRef<UserRegistry.Command> userRegistryActor;
   private final ActorRef<Delivery.DeliveryCommand> deliveryActor;
   private final Duration askTimeout;
   private final Scheduler scheduler;
 
-  public UserRoutes(ActorSystem<?> system, ActorRef<UserRegistry.Command> userRegistryActor, ActorRef<Delivery.DeliveryCommand> deliveryActor) {
+  public DeliveryRoutes(ActorSystem<?> system, ActorRef<UserRegistry.Command> userRegistryActor, ActorRef<Delivery.DeliveryCommand> deliveryActor) {
     this.userRegistryActor = userRegistryActor;
     this.deliveryActor = deliveryActor;
     scheduler = system.scheduler();
