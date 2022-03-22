@@ -74,6 +74,10 @@ public class DeliveryRoutes {
   private CompletionStage<Delivery.ClientResponse> orderDelivered(Long orderId) {
     return AskPattern.ask(deliveryActor, ref -> new Delivery.OrderDeliveredMessage(orderId, ref), askTimeout, scheduler);
   }
+  private CompletionStage<Delivery.ClientBooleanResponse> orderStatus(Long orderId)
+  {
+    return AskPattern.ask(deliveryActor,ref -> new Delivery.OrderStatusMessage(orderId, ref),askTimeout,scheduler);
+  }
 
   /**
    * This method creates one route (of possibly many more that will be part of your Web App)
@@ -200,9 +204,19 @@ public class DeliveryRoutes {
         }
       ),
       path(PathMatchers.segment("order")
-        .slash(PathMatchers.integerSegment()), orderId -> 
+        .slash(PathMatchers.longSegment()), orderId -> 
         {
-          return complete("Hello order " + orderId);
+          //return complete("Hello order " + orderId);
+          return onSuccess( orderStatus(orderId), response -> {
+            if(response.response==true)
+            {
+              return complete(StatusCodes.NOT_FOUND);
+            }
+            else
+            {
+              return complete("ERROR");
+            }
+          });
         }
       )
                                 

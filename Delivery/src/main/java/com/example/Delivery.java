@@ -85,11 +85,31 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         }
     }
 
+    // Order status Message
+    public static class OrderStatusMessage implements DeliveryCommand { 
+
+        Long orderId;
+        ActorRef<ClientBooleanResponse> client;
+        public OrderStatusMessage(Long orderId, ActorRef<ClientBooleanResponse> client) {
+            this.orderId = orderId;
+            this.client = client;
+        }
+    }
+
     // Reply messages to the client
     public static class ClientResponse
     {
         String response;
         public ClientResponse(String response)
+        {
+            this.response = response;
+        }
+    }
+
+    public static class ClientBooleanResponse
+    {
+        boolean response;
+        public ClientBooleanResponse(boolean response)
         {
             this.response = response;
         }
@@ -118,6 +138,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
        .onMessage(OrderDeliveredMessage.class, this::onOrderDeliveredMessage)
        .onMessage(AgentSignInMessage.class, this::onAgentSignInMessage)
        .onMessage(AgentSignOutMessage.class, this::onAgentSignOutMessage)
+       .onMessage(OrderStatusMessage.class, this::onOrderStatusMessage)
        .build();
     }
 
@@ -170,6 +191,22 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         currentAgent.tell(new Agent.AgentSignOutMessage(agentSignOut.agentId));
         agentSignOut.client.tell(new ClientResponse("Agent" + agentSignOut.agentId + " signed out"));
         System.out.println(agentSignOut.agentId);
+        return this;
+     }
+
+     // Define Signal Handler for Order status Message
+    public Behavior<DeliveryCommand> onOrderStatusMessage(OrderStatusMessage orderStatus) {
+
+        Long orderId = orderStatus.orderId;
+        if(orderRef.containsKey(orderId))
+        {
+            ActorRef<FullFillOrder.FullFillOrderCommand> order = this.orderRef.get(orderId);
+            orderStatus.client.tell(new ClientBooleanResponse(true));
+            
+            
+        }
+        
+        orderStatus.client.tell(new ClientBooleanResponse(false));
         return this;
      }
 
