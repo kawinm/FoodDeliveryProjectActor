@@ -60,7 +60,7 @@ public class DeliveryRoutes {
     return AskPattern.ask(userRegistryActor, ref -> new UserRegistry.CreateUser(user, ref), askTimeout, scheduler);
   }
 
-  private CompletionStage<Delivery.ClientResponse> requestOrder(Order order) {
+  private CompletionStage<Delivery.RequestOrderResponse> requestOrder(Order order) {
     return AskPattern.ask(deliveryActor, ref -> new Delivery.RequestOrderMessage(order, ref), askTimeout, scheduler);
   }
 
@@ -149,8 +149,8 @@ public class DeliveryRoutes {
           Jackson.unmarshaller(Order.class),
           order ->
               onSuccess(requestOrder(order), response -> {
-                log.info("Create result: {}", response.response);
-                return complete(StatusCodes.CREATED);
+                //log.info("Create result: {}", response.orderId);
+                return complete(StatusCodes.CREATED,response.response,Jackson.marshaller());
               })
             )
         )

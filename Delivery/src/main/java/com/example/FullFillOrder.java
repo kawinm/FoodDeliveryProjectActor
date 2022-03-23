@@ -150,7 +150,12 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         {
             e.printStackTrace();
         }
-                            
+        if(response.statusCode()==410)
+        {
+
+            return this;
+        }     
+                   
                         
         System.out.println(response.statusCode());
         System.out.println(response.body());*/

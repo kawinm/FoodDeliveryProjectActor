@@ -10,7 +10,10 @@ import java.util.HashMap;
 
 import com.example.models.Item;
 import com.example.models.Order;
+import com.example.models.OrderIdResponse;
 import com.example.models.OrderStatus;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.AbstractBehavior;
@@ -45,8 +48,8 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     public static class RequestOrderMessage implements DeliveryCommand { 
 
         Order order;
-        ActorRef<ClientResponse> client;
-        public RequestOrderMessage(Order order, ActorRef<ClientResponse> client) {
+        ActorRef<RequestOrderResponse> client;
+        public RequestOrderMessage(Order order, ActorRef<RequestOrderResponse> client) {
             this.order = order;
             this.client  = client;
         }
@@ -116,14 +119,13 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         }
     }
 
-    public static class ClientStatusResponse {
-
-        boolean response;
-        OrderStatus orderStatusResponse;
-        
-        public ClientStatusResponse(boolean response, OrderStatus orderStatusResponse) {
+    public static class RequestOrderResponse
+    {
+        OrderIdResponse response;
+        @JsonCreator
+        public RequestOrderResponse(@JsonProperty("orderId") OrderIdResponse response)
+        {
             this.response = response;
-            this.orderStatusResponse = orderStatusResponse;
         }
     }
     
@@ -166,11 +168,9 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     public Behavior<DeliveryCommand> onRequestOrderMessage(RequestOrderMessage requestOrder) {
 
         ActorRef<FullFillOrder.FullFillOrderCommand> orderActor = getContext().spawn(FullFillOrder.create(currentOrderId, requestOrder.order, Constants.ORDER_UNASSIGNED, itemMap, agentRef), "order_"+currentOrderId);
-        
+        requestOrder.client.tell(new RequestOrderResponse(new OrderIdResponse(currentOrderId)));
         orderRef.put(currentOrderId++, orderActor);
-
-        System.out.println(requestOrder.order.getCustId());
-        requestOrder.client.tell(new ClientResponse("requestOrder OK" + requestOrder.order.getCustId()));
+        //System.out.println(requestOrder.order.getCustId());
         orderActor.tell(new FullFillOrder.InitiateOrder());
         return this;
      }

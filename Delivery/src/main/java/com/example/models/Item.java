@@ -45,7 +45,7 @@ public class Item {
     @Override
     public boolean equals(Object obj) {
         Item item  = (Item) obj;
-        System.out.print("hhh"+this.restId+"lll"+item.getRestId());
+        //System.out.print("hhh"+this.restId+"lll"+item.getRestId());
         if (this.restId.equals(item.getRestId()) && this.itemId.equals(item.getItemId()))
             return true;
         return false;
