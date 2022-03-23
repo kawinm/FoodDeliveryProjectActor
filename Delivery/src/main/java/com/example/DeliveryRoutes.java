@@ -213,18 +213,20 @@ public class DeliveryRoutes {
         }
       ),
       path(PathMatchers.segment("order")
-        .slash(PathMatchers.longSegment()), orderId -> 
-        {
-          //return complete("Hello order " + orderId);
-          return onSuccess( orderStatus(orderId), response -> {
-            if (response.response == true) {
-              return complete(StatusCodes.OK, response.orderStatusResponse, Jackson.marshaller());
-            }
-            else {
-              return complete(StatusCodes.NOT_FOUND);
-            }
-          });
-        }
+        .slash(PathMatchers.longSegment()), orderId -> get(() -> {
+
+             //return complete("Hello order " + orderId);
+             return onSuccess( orderStatus(orderId), response -> {
+              if (response.response == true) {
+                return complete(StatusCodes.OK, response.orderStatusResponse, Jackson.marshaller());
+              }
+              else {
+                return complete(StatusCodes.NOT_FOUND);
+              }
+            });
+
+        })
+         
       )
                                 
     );
