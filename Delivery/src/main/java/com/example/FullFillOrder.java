@@ -123,20 +123,21 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     public Behavior<FullFillOrderCommand> onInitiateOrder(InitiateOrder initiateOrder)
     {
         Long  price = 0l;
-        
+        this.status = Constants.ORDER_UNASSIGNED;
         Item item = new Item(this.order.restId,this.order.itemId);
         price = this.itemMap.get(item);
         
-        String wallet_request_payload = "{ \"custId\" : " + this.order.getCustId() 
-                                        + ", \"amount\" : " + price + " }";
+        Long amount = price * this.order.getQty();
+        String wallet_request = "{ \"custId\" : " + this.order.getCustId() 
+                                        + ", \"amount\" : " + amount + " }";
         String restuarant_request = "{ \"restId\" : " + this.order.getRestId() 
                                     + ", \"itemId\" : " + this.order.getItemId() 
-                                    + ", \"qty\" : " + this.order.getItemId() + "}";
-        System.out.println(price);
-        /*HttpRequest request = HttpRequest.newBuilder()
+                                    + ", \"qty\" : " + this.order.getQty() + "}";
+        System.out.println(amount);
+        HttpRequest request = HttpRequest.newBuilder()
                             .uri(URI.create("http://localhost:8082/deductBalance"))
                                     .header("Content-Type","application/json")
-                                    .POST(HttpRequest.BodyPublishers.ofString(wallet_request_payload))
+                                    .POST(HttpRequest.BodyPublishers.ofString(wallet_request))
                                     .build();
                         
                                 //HttpClient client = HttpClient.newHttpClient();
@@ -152,14 +153,52 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         }
         if(response.statusCode()==410)
         {
+            System.out.println("Insufficient balance");
 
             return this;
-        }     
-                   
+        } 
+        request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:8080/acceptOrder"))
+                .header("Content-Type","application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(restuarant_request))
+                .build();
+        response = null;
+        try
+        {
+            HttpClient client = HttpClient.newHttpClient();
+            response = client.send(request,HttpResponse.BodyHandlers.ofString());
+        }
+        catch(Exception e)
+        {
+            
+                    e.printStackTrace();
+        }
+
+        if(response.statusCode()==410)
+        {
+            System.out.println("Insufficient stock");
+            request = HttpRequest.newBuilder()
+                            .uri(URI.create("http://localhost:8082/addBalance"))
+                                    .header("Content-Type","application/json")
+                                    .POST(HttpRequest.BodyPublishers.ofString(wallet_request))
+                                    .build();
                         
-        System.out.println(response.statusCode());
-        System.out.println(response.body());*/
-        return this;
+                                //HttpClient client = HttpClient.newHttpClient();
+            response = null;
+            try
+            {
+                HttpClient client = HttpClient.newHttpClient();
+                response = client.send(request,HttpResponse.BodyHandlers.ofString());
+            }
+            catch(Exception e)
+            {
+                e.printStackTrace();
+            }
+            return this;
+        }        
+        System.out.println("");
+        this.status = Constants.ORDER_DELIVERED;  
+        return this;      
     }
 
     // Define Message and Signal Handler for Order Delivered Message
