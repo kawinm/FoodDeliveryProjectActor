@@ -37,12 +37,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     interface DeliveryCommand {}
 
     // Define messsages here
-    public static class SampleMessage implements DeliveryCommand { 
-        String message;
-        public SampleMessage(String message) {
-            this.message = message;
-        }
-    }
+    
 
     // Request Order Message
     public static class RequestOrderMessage implements DeliveryCommand { 
@@ -147,7 +142,6 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     @Override
     public Receive<DeliveryCommand> createReceive() {
        return newReceiveBuilder()
-       .onMessage(SampleMessage.class, this::onSampleMessage)
        .onMessage(RequestOrderMessage.class, this::onRequestOrderMessage)
        .onMessage(OrderDeliveredMessage.class, this::onOrderDeliveredMessage)
        .onMessage(AgentSignInMessage.class, this::onAgentSignInMessage)
@@ -158,12 +152,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     }
 
     // Define Message and Signal Handlers
-    public Behavior<DeliveryCommand> onSampleMessage(SampleMessage sampleMessage) {
-
-       System.out.println(sampleMessage.message);
-       return this;
-    }
-
+  
     // Define Signal Handler for Request Order Message
     public Behavior<DeliveryCommand> onRequestOrderMessage(RequestOrderMessage requestOrder) {
 

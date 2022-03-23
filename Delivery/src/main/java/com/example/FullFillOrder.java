@@ -34,13 +34,6 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     interface FullFillOrderCommand {}
 
     // Define messsages here
-    public static class SampleMessage implements FullFillOrderCommand { 
-        String message;
-        public SampleMessage(String message) {
-            this.message = message;
-        }
-    }
-
     // Define Order Delivered
     public static class OrderDeliveredMessage implements FullFillOrderCommand { 
 
@@ -105,7 +98,6 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     @Override
     public Receive<FullFillOrderCommand> createReceive() {
        return newReceiveBuilder()
-       .onMessage(SampleMessage.class, this::onSampleMessage)
        .onMessage(OrderDeliveredMessage.class, this::onOrderDeliveredMessage)
        .onMessage(InitiateOrder.class, this::onInitiateOrder)
        .onMessage(OrderStatusMessage.class, this::onOrderStatusMessage)
@@ -114,12 +106,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     }
 
     // Define Message and Signal Handlers
-    public Behavior<FullFillOrderCommand> onSampleMessage(SampleMessage sampleMessage) {
-
-       System.out.println(sampleMessage.message);
-       return this;
-    }
-    
+   
     public Behavior<FullFillOrderCommand> onInitiateOrder(InitiateOrder initiateOrder)
     {
         Long  price = 0l;
