@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 
-import com.example.UserRegistry.User;
 import com.example.models.AgentStatus;
 import com.example.models.Order;
 import com.example.models.OrderStatus;
@@ -32,32 +31,14 @@ public class DeliveryRoutes {
 
   //#user-routes-class
   private final static Logger log = LoggerFactory.getLogger(DeliveryRoutes.class);
-  private final ActorRef<UserRegistry.Command> userRegistryActor;
   private final ActorRef<Delivery.DeliveryCommand> deliveryActor;
   private final Duration askTimeout;
   private final Scheduler scheduler;
 
-  public DeliveryRoutes(ActorSystem<?> system, ActorRef<UserRegistry.Command> userRegistryActor, ActorRef<Delivery.DeliveryCommand> deliveryActor) {
-    this.userRegistryActor = userRegistryActor;
+  public DeliveryRoutes(ActorSystem<?> system, ActorRef<Delivery.DeliveryCommand> deliveryActor) {
     this.deliveryActor = deliveryActor;
     scheduler = system.scheduler();
     askTimeout = system.settings().config().getDuration("my-app.routes.ask-timeout");
-  }
-
-  private CompletionStage<UserRegistry.GetUserResponse> getUser(String name) {
-    return AskPattern.ask(userRegistryActor, ref -> new UserRegistry.GetUser(name, ref), askTimeout, scheduler);
-  }
-
-  private CompletionStage<UserRegistry.ActionPerformed> deleteUser(String name) {
-    return AskPattern.ask(userRegistryActor, ref -> new UserRegistry.DeleteUser(name, ref), askTimeout, scheduler);
-  }
-
-  private CompletionStage<UserRegistry.Users> getUsers() {
-    return AskPattern.ask(userRegistryActor, UserRegistry.GetUsers::new, askTimeout, scheduler);
-  }
-
-  private CompletionStage<UserRegistry.ActionPerformed> createUser(User user) {
-    return AskPattern.ask(userRegistryActor, ref -> new UserRegistry.CreateUser(user, ref), askTimeout, scheduler);
   }
 
   private CompletionStage<Delivery.RequestOrderResponse> requestOrder(Order order) {
@@ -92,57 +73,6 @@ public class DeliveryRoutes {
   public Route userRoutes() {
     return 
     concat ( 
-      /* TO BE DELETED */
-      pathPrefix("users", () ->
-        concat(
-            //#users-get-delete
-            pathEnd(() ->
-                concat(
-                    get(() ->
-                        onSuccess(getUsers(),
-                            users -> complete(StatusCodes.OK, users, Jackson.marshaller())
-                        )
-                    ),
-                    post(() ->
-                        entity(
-                            Jackson.unmarshaller(User.class),
-                            user ->
-                                onSuccess(createUser(user), performed -> {
-                                  log.info("Create result: {}", performed.description);
-                                  return complete(StatusCodes.CREATED, performed, Jackson.marshaller());
-                                })
-                        )
-                    )
-                )
-            ),
-            //#users-get-delete
-            //#users-get-post
-            path(PathMatchers.segment(), (String name) ->
-                concat(
-                    get(() ->
-                            //#retrieve-user-info
-                            rejectEmptyResponse(() ->
-                                onSuccess(getUser(name), performed ->
-					  complete(StatusCodes.OK,
-						   performed.maybeUser.isPresent() ? performed.maybeUser.get() : "NONE", Jackson.marshaller())
-                                )
-                            )
-                        //#retrieve-user-info
-                    ),
-                    delete(() ->
-                            //#users-delete-logic
-                            onSuccess(deleteUser(name), performed -> {
-                                  log.info("Delete result: {}", performed.description);
-                                  return complete(StatusCodes.OK, performed, Jackson.marshaller());
-                                }
-                            )
-                        //#users-delete-logic
-                    )
-                )
-            )
-            //#users-get-post
-        )
-      ),
       /* Above block to be deleted*/
       path("requestOrder",() -> 
         post(()->  entity(
@@ -208,9 +138,10 @@ public class DeliveryRoutes {
       ),
       path(PathMatchers.segment("agent")
         .slash(PathMatchers.integerSegment()), userId -> 
-        {
+        get(() -> {
           return complete("Hello user " + userId);
-        }
+          }
+        )
       ),
       path(PathMatchers.segment("order")
         .slash(PathMatchers.longSegment()), orderId -> get(() -> {

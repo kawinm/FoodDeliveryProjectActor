@@ -99,14 +99,9 @@ public class QuickstartApp {
             ActorRef<Delivery.DeliveryCommand> deliveryActor = context.spawn(Delivery.create(itemMap, agentRefs), "delivery_main");
 
             // Sample message send
-            agentRefs.get(201l).tell(new Agent.SampleMessage("Hello from Agent 201"));
+            //agentRefs.get(201l).tell(new Agent.SampleMessage("Hello from Agent 201"));
 
-            // To Delete $#%%
-            ActorRef<UserRegistry.Command> userRegistryActor =
-                context.spawn(UserRegistry.create(), "UserRegistry");
-
-            
-            DeliveryRoutes userRoutes = new DeliveryRoutes(context.getSystem(), userRegistryActor,deliveryActor);
+            DeliveryRoutes userRoutes = new DeliveryRoutes(context.getSystem(),deliveryActor);
             startHttpServer(userRoutes.userRoutes(), context.getSystem());
 
             return Behaviors.empty();
