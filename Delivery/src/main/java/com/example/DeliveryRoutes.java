@@ -130,12 +130,6 @@ public class DeliveryRoutes {
         //})
         )          
       ),
-      path("reInitialize",()->
-        post(() -> onSuccess(reInitialize(), response -> {
-          //log.info("Create result: {}", response.response);
-          return complete(StatusCodes.CREATED);
-        }))
-      ),
       path(PathMatchers.segment("agent")
         .slash(PathMatchers.integerSegment()), userId -> 
         get(() -> {
@@ -152,12 +146,18 @@ public class DeliveryRoutes {
                 return complete(StatusCodes.OK, response.orderStatusResponse, Jackson.marshaller());
               }
               else {
-                return complete(StatusCodes.NOT_FOUND);
+                return complete(StatusCodes.NOT_FOUND,"");
               }
             });
 
         })
          
+      ),
+      path("reInitialize",()->
+        post(() -> onSuccess(reInitialize(), response -> {
+          //log.info("Create result: {}", response.response);
+          return complete(StatusCodes.CREATED,"");
+        }))
       )
                                 
     );
