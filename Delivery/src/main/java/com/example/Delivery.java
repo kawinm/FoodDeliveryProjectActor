@@ -162,17 +162,9 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         //System.out.println(requestOrder.order.getCustId());
         orderActor.tell(new FullFillOrder.InitiateOrder());
         return this;
-     }
+    }
 
-      // Define Message and Signal Handler for Order Delivered Message
-    public Behavior<DeliveryCommand> onOrderDeliveredMessage(OrderDeliveredMessage orderDelivered) {
-
-        System.out.println(orderDelivered.orderId);
-        orderDelivered.client.tell(new ClientResponse("Order Delivered"));
-        return this;
-     }
-
-     // Define Signal Handler for Agent SignIn Message
+    // Define Signal Handler for Agent SignIn Message
     public Behavior<DeliveryCommand> onAgentSignInMessage(AgentSignInMessage agentSignIn) {
 
         ActorRef<Agent.AgentCommand> currentAgent = agentRef.get(agentSignIn.agentId); 
@@ -182,7 +174,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         agentSignIn.client.tell(new ClientResponse("Agent" + agentSignIn.agentId + " signed in"));
         System.out.println(agentSignIn.agentId);
         return this;
-     }
+    }
 
      // Define Signal Handler for Agent SignOut Message
     public Behavior<DeliveryCommand> onAgentSignOutMessage(AgentSignOutMessage agentSignOut) {
@@ -193,6 +185,15 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         currentAgent.tell(new Agent.AgentSignOutMessage(agentSignOut.agentId));
         agentSignOut.client.tell(new ClientResponse("Agent" + agentSignOut.agentId + " signed out"));
         System.out.println(agentSignOut.agentId);
+        return this;
+    }
+
+
+      // Define Message and Signal Handler for Order Delivered Message
+    public Behavior<DeliveryCommand> onOrderDeliveredMessage(OrderDeliveredMessage orderDelivered) {
+
+        System.out.println(orderDelivered.orderId);
+        orderDelivered.client.tell(new ClientResponse("Order Delivered"));
         return this;
      }
 

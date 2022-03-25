@@ -28,12 +28,6 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
         }
     }
 
-    // Get Agent Status Message
-    public static class getAgentStatusMessage implements AgentCommand { 
-
-        public getAgentStatusMessage() { }
-    }
-
     // Agent Signin Message
     public static class AgentSignInMessage implements AgentCommand { 
 
@@ -54,6 +48,12 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
         }
     }
     
+    // Get Agent Status Message
+    public static class getAgentStatusMessage implements AgentCommand { 
+
+        public getAgentStatusMessage() { }
+    }
+
     
     //Constructor
     public Agent(ActorContext<AgentCommand> context, Long agentId, int status) {
@@ -74,9 +74,9 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     public Receive<AgentCommand> createReceive() {
        return newReceiveBuilder()
        .onMessage(SampleMessage.class, this::onSampleMessage)
-       .onMessage(getAgentStatusMessage.class, this::onGetAgentStatusMessage)
        .onMessage(AgentSignInMessage.class, this::onAgentSignInMessage)
        .onMessage(AgentSignOutMessage.class, this::onAgentSignOutMessage)
+       .onMessage(getAgentStatusMessage.class, this::onGetAgentStatusMessage)
        .build();
     }
 
@@ -87,12 +87,7 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
        return this;
     }
 
-    // Define Signal Handler for Agent SignIn Message
-    public Behavior<AgentCommand> onGetAgentStatusMessage(getAgentStatusMessage agentStatus) {
-
-        return this;
-     }
-
+   
     // Define Signal Handler for Agent SignIn Message
     public Behavior<AgentCommand> onAgentSignInMessage(AgentSignInMessage agentSignIn) {
 
@@ -101,7 +96,7 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
         }
 
         return this;
-     }
+    }
 
      // Define Signal Handler for Agent SignOut Message
     public Behavior<AgentCommand> onAgentSignOutMessage(AgentSignOutMessage agentSignOut) {
@@ -110,5 +105,12 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
 
         System.out.println(agentSignOut.agentId);
         return this;
+    }
+
+     // Define Signal Handler for Agent Status Message
+    public Behavior<AgentCommand> onGetAgentStatusMessage(getAgentStatusMessage agentStatus) {
+
+        return this;
      }
+
 }
