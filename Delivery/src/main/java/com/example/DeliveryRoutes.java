@@ -56,6 +56,10 @@ public class DeliveryRoutes {
   private CompletionStage<Delivery.ClientResponse> orderDelivered(Long orderId) {
     return AskPattern.ask(deliveryActor, ref -> new Delivery.OrderDeliveredMessage(orderId, ref), askTimeout, scheduler);
   }
+  
+  private CompletionStage<Agent.GetAgentStatusResponse> agentStatus(Long agentId) {
+    return AskPattern.ask(deliveryActor, ref -> new Delivery.AgentStatusMessage(agentId, ref), askTimeout, scheduler);
+  }
 
   private CompletionStage<FullFillOrder.ClientStatusResponse> orderStatus(Long orderId) {
     return AskPattern.ask(deliveryActor,ref -> new Delivery.OrderStatusMessage(orderId, ref),askTimeout,scheduler);
@@ -89,7 +93,7 @@ public class DeliveryRoutes {
         post(() -> entity(
           Jackson.unmarshaller(AgentStatus.class),
           agentstatus ->
-              onSuccess(orderDelivered(agentstatus.getAgentId()), response -> {
+              onSuccess(agentSignIn(agentstatus.getAgentId()), response -> {
                 log.info("Create result: {}", response.response);
                 return complete(StatusCodes.CREATED);
               })
@@ -104,7 +108,7 @@ public class DeliveryRoutes {
         post(()-> entity(
           Jackson.unmarshaller(AgentStatus.class),
           agentstatus ->
-              onSuccess(orderDelivered(agentstatus.getAgentId()), response -> {
+              onSuccess(agentSignOut(agentstatus.getAgentId()), response -> {
                 log.info("Create result: {}", response.response);
                 return complete(StatusCodes.CREATED);
               })
@@ -131,9 +135,11 @@ public class DeliveryRoutes {
         )          
       ),
       path(PathMatchers.segment("agent")
-        .slash(PathMatchers.integerSegment()), userId -> 
+        .slash(PathMatchers.longSegment()), agentId -> 
         get(() -> {
-          return complete("Hello user " + userId);
+          return onSuccess(agentStatus(agentId), response -> {
+            return complete(StatusCodes.OK,response.agentStatus,Jackson.marshaller());
+          });
           }
         )
       ),

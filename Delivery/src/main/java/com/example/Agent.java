@@ -1,10 +1,15 @@
 package com.example;
 
 import akka.actor.typed.javadsl.ActorContext;
+
+import com.example.models.AgentStatus;
+
+import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.Receive;
 import akka.japi.pf.ReceiveBuilder;
+import ch.qos.logback.core.joran.conditional.ElseAction;
 import akka.actor.typed.javadsl.Behaviors;
 
 
@@ -19,14 +24,6 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     // Define the message type which 
     // actor can process
     interface AgentCommand {}
-
-    // Define messsages here
-    public static class SampleMessage implements AgentCommand { 
-        String message;
-        public SampleMessage(String message) {
-            this.message = message;
-        }
-    }
 
     // Agent Signin Message
     public static class AgentSignInMessage implements AgentCommand { 
@@ -48,13 +45,26 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
         }
     }
     
+    
     // Get Agent Status Message
-    public static class getAgentStatusMessage implements AgentCommand { 
-
-        public getAgentStatusMessage() { }
+    public static class GetAgentStatusMessage implements AgentCommand { 
+        
+        ActorRef<GetAgentStatusResponse> agentStatusResponse;
+        public GetAgentStatusMessage(ActorRef<GetAgentStatusResponse> agentStatusResponse) {
+            this.agentStatusResponse = agentStatusResponse;
+        }
     }
 
-    
+    public static class GetAgentStatusResponse {
+        AgentStatus agentStatus;
+        
+        public GetAgentStatusResponse(AgentStatus agentStatus)
+        {
+            this.agentStatus = agentStatus;
+        }
+    }
+  
+
     //Constructor
     public Agent(ActorContext<AgentCommand> context, Long agentId, int status) {
         super(context);
@@ -73,21 +83,14 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     @Override
     public Receive<AgentCommand> createReceive() {
        return newReceiveBuilder()
-       .onMessage(SampleMessage.class, this::onSampleMessage)
        .onMessage(AgentSignInMessage.class, this::onAgentSignInMessage)
        .onMessage(AgentSignOutMessage.class, this::onAgentSignOutMessage)
-       .onMessage(getAgentStatusMessage.class, this::onGetAgentStatusMessage)
+       .onMessage(GetAgentStatusMessage.class, this::onGetAgentStatusMessage)
        .build();
     }
 
     // Define Message and Signal Handlers
-    public Behavior<AgentCommand> onSampleMessage(SampleMessage sampleMessage) {
-
-       System.out.println(sampleMessage.message);
-       return this;
-    }
-
-   
+  
     // Define Signal Handler for Agent SignIn Message
     public Behavior<AgentCommand> onAgentSignInMessage(AgentSignInMessage agentSignIn) {
 
@@ -108,8 +111,22 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     }
 
      // Define Signal Handler for Agent Status Message
-    public Behavior<AgentCommand> onGetAgentStatusMessage(getAgentStatusMessage agentStatus) {
+    public Behavior<AgentCommand> onGetAgentStatusMessage(GetAgentStatusMessage getAgentStatus) {
+        AgentStatus agentStatus = new AgentStatus(this.agentId);
+        if(this.status == Constants.AGENT_SIGNED_OUT)
+        {
+            agentStatus.setStatus("signed-out");
+        }
+        else if(this.status == Constants.AGENT_AVAILABLE)
+        {
+            agentStatus.setStatus("available");
+        }
+        else
+        {
+            agentStatus.setStatus("unavailable");
 
+        }
+        getAgentStatus.agentStatusResponse.tell(new GetAgentStatusResponse(agentStatus));
         return this;
      }
 

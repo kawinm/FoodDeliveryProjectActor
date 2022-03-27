@@ -84,6 +84,17 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         }
     }
 
+    // Agent Status Message
+    public static class AgentStatusMessage implements DeliveryCommand {
+        Long agentId;
+        ActorRef<Agent.GetAgentStatusResponse> client;
+        public AgentStatusMessage(Long agentId, ActorRef<Agent.GetAgentStatusResponse> client)
+        {
+            this.agentId = agentId;
+            this.client = client;
+        }
+    }
+
     // Order status Message
     public static class OrderStatusMessage implements DeliveryCommand { 
 
@@ -113,7 +124,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
             this.response = response;
         }
     }
-
+    // Response given as a result of call to enpoint /requestOrder
     public static class RequestOrderResponse
     {
         OrderIdResponse response;
@@ -147,6 +158,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
        .onMessage(AgentSignInMessage.class, this::onAgentSignInMessage)
        .onMessage(AgentSignOutMessage.class, this::onAgentSignOutMessage)
        .onMessage(OrderStatusMessage.class, this::onOrderStatusMessage)
+       .onMessage(AgentStatusMessage.class, this::onAgentStatusMessage)
        .onMessage(ReinitializeMessage.class, this::onReinitializeMessage)
        .build();
     }
@@ -194,6 +206,14 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
 
         System.out.println(orderDelivered.orderId);
         orderDelivered.client.tell(new ClientResponse("Order Delivered"));
+        return this;
+     }
+
+     // Define Message Handler for AgentStatus Message
+     public Behavior<DeliveryCommand> onAgentStatusMessage(AgentStatusMessage agentStatusMessage)
+     {
+        ActorRef<Agent.AgentCommand> agent = agentRef.get(agentStatusMessage.agentId);
+        agent.tell(new Agent.GetAgentStatusMessage(agentStatusMessage.client));
         return this;
      }
 
