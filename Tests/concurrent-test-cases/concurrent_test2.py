@@ -3,19 +3,28 @@ from threading import Thread
 import requests
 
 # Scenario:
-# Check if the order delivered remains consistent when given concurrent requests to the same resource.
+# Check if the starting order id is 1000 after reinitialize and with an additional order request running concurrently.
 
 # RESTAURANT SERVICE    : http://localhost:8080
 # DELIVERY SERVICE      : http://localhost:8081
 # WALLET SERVICE        : http://localhost:8082
 
-def t1(result, id, orderId):  # First concurrent request
+def t1(result):  # First concurrent request
 
-    # Changes the status of the given order to delivered
+    # Requesting for order
     http_response = requests.post(
-        "http://localhost:8081/orderDelivered", json={"orderId": orderId})
+        "http://localhost:8081/requestOrder", json={"custId": 301, "restId": 101, "itemId":1, "qty": 1})
 
-    result[id] = http_response
+    result["1"] = http_response
+
+
+def t2(result):  # Second concurrent request
+
+    # Reinitialize Delivery service
+    http_response = requests.post("http://localhost:8081/reInitialize")
+
+    result["2"] = http_response
+
 
 def test():
 
@@ -30,96 +39,79 @@ def test():
     # Reinitialize Wallet service
     http_response = requests.post("http://localhost:8082/reInitialize")
 
-    #Signing in Agent 201
+    # Requesting for order
     http_response = requests.post(
-        "http://localhost:8081/agentSignIn", json={"agentId": 201})
+        "http://localhost:8081/requestOrder", json={"custId": 302, "restId": 101, "itemId":1, "qty": 1})
     
     if(http_response.status_code != HTTPStatus.CREATED):
         return 'Fail1'
 
-    # Checks the status of agent 201
-    http_response = requests.get(f"http://localhost:8081/agent/201")
-
-    if(http_response.status_code != HTTPStatus.OK):
+    # Requesting for another order
+    http_response = requests.post(
+        "http://localhost:8081/requestOrder", json={"custId": 301, "restId": 101, "itemId":1, "qty": 1})
+    
+    if(http_response.status_code != HTTPStatus.CREATED):
         return 'Fail2'
 
     res_body = http_response.json()
 
-    status2 = res_body.get("status")
-
-    if (status2 != "available"):
-        return "Fail3"
-
-    # Requesting for order
-    http_response = requests.post(
-        "http://localhost:8081/requestOrder", json={"custId": 301, "restId": 101, "itemId":1, "qty": 3})
-    
-    if(http_response.status_code != HTTPStatus.CREATED):
-        return 'Fail4'
-
-    res_body = http_response.json()
-
-    orderId = res_body.get("orderId")
-
-    # Requesting for another order
-    http_response = requests.post(
-        "http://localhost:8081/requestOrder", json={"custId": 301, "restId": 101, "itemId":1, "qty": 3})
-    
-    if(http_response.status_code != HTTPStatus.CREATED):
-        return 'Fail5'
-
-    res_body = http_response.json()
-
-    orderId2 = res_body.get("orderId")
-
-    # Get status of first order
-    http_response = requests.get(f"http://localhost:8081/order/{orderId}")
-
-    if(http_response.status_code != HTTPStatus.OK):
-        return 'Fail6'
-
-    res_body = http_response.json()
-
-    status3 = res_body.get("status")
-
-    if (status3 != "delivered"):
-        return "Fail7"
-
-
-    thread = [0 for i in range(10)]
 
     ### Parallel Execution Begins ###
-    for i in range(10):
-        thread[i] = Thread(target=t1, kwargs={"result": result, "id": i, "orderId": orderId})
+    thread1 = Thread(target=t1, kwargs={"result": result})
+    thread2 = Thread(target=t2, kwargs={"result": result})
 
-    for i in range(10):
-        thread[i].start()
+    thread1.start()
+    thread2.start()
 
-    for i in range(10):
-        thread[i].join()
+    thread1.join()
+    thread2.join()
 
     ### Parallel Execution Ends ###
 
-    for i in range(10):
-        if result[i].status_code != HTTPStatus.CREATED:
-            return "Fail9"
-
+    if result["1"].status_code != HTTPStatus.CREATED or result["2"].status_code != HTTPStatus.CREATED:
+        return "Fail3"
 
     # Get status of the second order
-    http_response = requests.get(f"http://localhost:8081/order/{orderId2}")
+    http_response = requests.get(f"http://localhost:8081/order/1001")
 
-    if(http_response.status_code != HTTPStatus.OK):
-        return 'Fail10'
+    # The second order with order id 1001 should have to be cleared after reinitialize
+    if(http_response.status_code != HTTPStatus.NOT_FOUND):
+        return 'Fail4'
 
-    res_body = http_response.json()
+    # Get status of the first order
+    http_response = requests.get(f"http://localhost:8081/order/1000")
 
-    status4 = res_body.get("status")
+    # If it is not available, then the order request was received before the reinitialize
+    if(http_response.status_code == HTTPStatus.NOT_FOUND):
 
-    # The status of the second order should be assigned because the first order got delivered
-    # and there will be one available agent
-    if (status4 != "delivered"):
-        return "Fail11"
+        # Requesting for order
+        http_response = requests.post(
+            "http://localhost:8081/requestOrder", json={"custId": 301, "restId": 101, "itemId":1, "qty": 1})
+        
+        if(http_response.status_code != HTTPStatus.CREATED):
+            return 'Fail5'
 
+        orderId3 = http_response.json().get("orderId")
+
+        # Checks if the starting order id is 1000
+        if orderId3 != 1000:
+            return 'Fail6'
+
+    elif (http_response.status_code == HTTPStatus.OK):
+
+        # Requesting for order
+        http_response = requests.post(
+            "http://localhost:8081/requestOrder", json={"custId": 301, "restId": 101, "itemId":1, "qty": 1})
+        
+        if(http_response.status_code != HTTPStatus.CREATED):
+            return 'Fail7'
+
+        orderId3 = http_response.json().get("orderId")
+
+        # Checks if the current order id is 1001
+        # Because the order request given concurrently will have order id 1000 in this cases
+        if orderId3 != 1001:
+            return 'Fail8'
     
     return 'Pass'
 

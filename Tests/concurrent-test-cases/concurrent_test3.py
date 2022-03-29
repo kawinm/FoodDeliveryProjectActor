@@ -3,63 +3,60 @@ from threading import Thread
 import requests
 
 # Scenario:
-# Check if the starting order id is 1000 after reinitialize and with an additional order request running concurrently.
+# Check if only one customer is able to deplete all quantites of a given item
+# when parallel order requests come for the same item
+
 
 # RESTAURANT SERVICE    : http://localhost:8080
 # DELIVERY SERVICE      : http://localhost:8081
 # WALLET SERVICE        : http://localhost:8082
 
-def t1(result):  # First concurrent request
-
-    # Requesting for order
+# Request made by the customer with customer id 301
+def t1(result):
     http_response = requests.post(
-        "http://localhost:8081/requestOrder", json={"custId": 301, "restId": 101, "itemId":1, "qty": 1})
-
+        "http://localhost:8081/requestOrder",
+        json={
+            "custId": 301,
+            "restId": 101,
+            "itemId" : 1,
+            "qty" : 10
+        }
+    )
     result["1"] = http_response
 
-
-def t2(result):  # Second concurrent request
-
-    # Reinitialize Delivery service
-    http_response = requests.post("http://localhost:8081/reInitialize")
-
+# Request made by the customer with id 302
+def t2(result):
+    http_response = requests.post(
+        "http://localhost:8081/requestOrder",
+        json={
+            "custId": 302,
+            "restId": 101,
+            "itemId" : 1,
+            "qty" : 10
+        }
+    )
     result["2"] = http_response
 
 
 def test():
-
-    result = {}
-
     # Reinitialize Restaurant service
     http_response = requests.post("http://localhost:8080/reInitialize")
-
     # Reinitialize Delivery service
     http_response = requests.post("http://localhost:8081/reInitialize")
-
     # Reinitialize Wallet service
     http_response = requests.post("http://localhost:8082/reInitialize")
 
-    # Requesting for order
-    http_response = requests.post(
-        "http://localhost:8081/requestOrder", json={"custId": 302, "restId": 101, "itemId":1, "qty": 1})
-    
-    if(http_response.status_code != HTTPStatus.CREATED):
-        return 'Fail1'
+    # Get the Initial balances of the customers
+    cust301_initial_balance = 0
+    cust302_initial_balance = 0
+    cust301_initial_balance = requests.get("http://localhost:8082/balance/301").json().get("balance")
+    cust302_initial_balance = requests.get("http://localhost:8082/balance/302").json().get("balance")
 
-    # Requesting for another order
-    http_response = requests.post(
-        "http://localhost:8081/requestOrder", json={"custId": 301, "restId": 101, "itemId":1, "qty": 1})
-    
-    if(http_response.status_code != HTTPStatus.CREATED):
-        return 'Fail2'
-
-    res_body = http_response.json()
-
-
-    ### Parallel Execution Begins ###
-    thread1 = Thread(target=t1, kwargs={"result": result})
+    ### Parallel Execution Begins ##
+    result = {}
+    thread1 = Thread(target=t1 ,kwargs={"result": result})
     thread2 = Thread(target=t2, kwargs={"result": result})
-
+    
     thread1.start()
     thread2.start()
 
@@ -68,51 +65,22 @@ def test():
 
     ### Parallel Execution Ends ###
 
-    if result["1"].status_code != HTTPStatus.CREATED or result["2"].status_code != HTTPStatus.CREATED:
-        return "Fail3"
+    # One of the orders must be created
+    if (result["1"].status_code != HTTPStatus.CREATED or result["2"].status_code != HTTPStatus.CREATED):
+        return "Fail1"
 
-    # Get status of the second order
-    http_response = requests.get(f"http://localhost:8081/order/1001")
+    cust301_final_balance = requests.get("http://localhost:8082/balance/301").json().get("balance")
+    cust302_final_balance = requests.get("http://localhost:8082/balance/302").json().get("balance")
 
-    # The second order with order id 1001 should have to be cleared after reinitialize
-    if(http_response.status_code != HTTPStatus.NOT_FOUND):
-        return 'Fail4'
-
-    # Get status of the first order
-    http_response = requests.get(f"http://localhost:8081/order/1000")
-
-    # If it is not available, then the order request was received before the reinitialize
-    if(http_response.status_code == HTTPStatus.NOT_FOUND):
-
-        # Requesting for order
-        http_response = requests.post(
-            "http://localhost:8081/requestOrder", json={"custId": 301, "restId": 101, "itemId":1, "qty": 1})
-        
-        if(http_response.status_code != HTTPStatus.CREATED):
-            return 'Fail5'
-
-        orderId3 = http_response.json().get("orderId")
-
-        # Checks if the starting order id is 1000
-        if orderId3 != 1000:
-            return 'Fail6'
-
-    elif (http_response.status_code == HTTPStatus.OK):
-
-        # Requesting for order
-        http_response = requests.post(
-            "http://localhost:8081/requestOrder", json={"custId": 301, "restId": 101, "itemId":1, "qty": 1})
-        
-        if(http_response.status_code != HTTPStatus.CREATED):
-            return 'Fail7'
-
-        orderId3 = http_response.json().get("orderId")
-
-        # Checks if the current order id is 1001
-        # Because the order request given concurrently will have order id 1000 in this cases
-        if orderId3 != 1001:
-            return 'Fail8'
+    # Check if the wallet balance is restored for the customers whose order request failed
+    if(result["1"].status_code == HTTPStatus.GONE):
+        if(cust301_final_balance!=cust301_initial_balance):
+            return "Fail2"
     
+    if(result["2"].status_code == HTTPStatus.GONE):
+        if(cust302_final_balance!=cust302_initial_balance):
+            return "Fail3"
+
     return 'Pass'
 
 
