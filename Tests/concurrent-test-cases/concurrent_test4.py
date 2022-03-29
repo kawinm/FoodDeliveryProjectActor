@@ -3,129 +3,84 @@ from threading import Thread
 import requests
 
 # Scenario:
-# Check if the order delivered remains consistent when given concurrent requests to the same resource.
+# Check if only one customer is able to deplete all quantites of a given item
+# when parallel order requests come for the same item
+
 
 # RESTAURANT SERVICE    : http://localhost:8080
 # DELIVERY SERVICE      : http://localhost:8081
 # WALLET SERVICE        : http://localhost:8082
 
-def t1(result, id, orderId):  # First concurrent request
-
-    # Changes the status of the given order to delivered
+# Request made by the customer with customer id 301
+def t1(result):
     http_response = requests.post(
-        "http://localhost:8081/orderDelivered", json={"orderId": orderId})
+        "http://localhost:8081/requestOrder",
+        json={
+            "custId": 301,
+            "restId": 101,
+            "itemId" : 1,
+            "qty" : 10
+        }
+    )
+    result["1"] = http_response
 
-    result[id] = http_response
+# Request made by the customer with id 302
+def t2(result):
+    http_response = requests.post(
+        "http://localhost:8081/requestOrder",
+        json={
+            "custId": 302,
+            "restId": 101,
+            "itemId" : 1,
+            "qty" : 10
+        }
+    )
+    result["2"] = http_response
+
 
 def test():
-
-    result = {}
-
     # Reinitialize Restaurant service
     http_response = requests.post("http://localhost:8080/reInitialize")
-
     # Reinitialize Delivery service
     http_response = requests.post("http://localhost:8081/reInitialize")
-
     # Reinitialize Wallet service
     http_response = requests.post("http://localhost:8082/reInitialize")
 
-    #Signing in Agent 201
-    http_response = requests.post(
-        "http://localhost:8081/agentSignIn", json={"agentId": 201})
+    # Get the Initial balances of the customers
+    cust301_initial_balance = 0
+    cust302_initial_balance = 0
+    cust301_initial_balance = requests.get("http://localhost:8082/balance/301").json().get("balance")
+    cust302_initial_balance = requests.get("http://localhost:8082/balance/302").json().get("balance")
+
+    ### Parallel Execution Begins ##
+    result = {}
+    thread1 = Thread(target=t1 ,kwargs={"result": result})
+    thread2 = Thread(target=t2, kwargs={"result": result})
     
-    if(http_response.status_code != HTTPStatus.CREATED):
-        return 'Fail1'
+    thread1.start()
+    thread2.start()
 
-    # Checks the status of agent 201
-    http_response = requests.get(f"http://localhost:8081/agent/201")
-
-    if(http_response.status_code != HTTPStatus.OK):
-        return 'Fail2'
-
-    res_body = http_response.json()
-
-    status2 = res_body.get("status")
-
-    if (status2 != "available"):
-        return "Fail3"
-
-    # Requesting for order
-    http_response = requests.post(
-        "http://localhost:8081/requestOrder", json={"custId": 301, "restId": 101, "itemId":1, "qty": 3})
-    
-    if(http_response.status_code != HTTPStatus.CREATED):
-        return 'Fail4'
-
-    res_body = http_response.json()
-
-    orderId = res_body.get("orderId")
-
-    # Requesting for another order
-    http_response = requests.post(
-        "http://localhost:8081/requestOrder", json={"custId": 301, "restId": 101, "itemId":1, "qty": 3})
-    
-    if(http_response.status_code != HTTPStatus.CREATED):
-        return 'Fail5'
-
-    res_body = http_response.json()
-
-    orderId2 = res_body.get("orderId")
-
-    # Get status of first order
-    http_response = requests.get(f"http://localhost:8081/order/{orderId}")
-
-    if(http_response.status_code != HTTPStatus.OK):
-        return 'Fail6'
-
-    res_body = http_response.json()
-
-    agent_id3 = res_body.get("agentId")
-    status3 = res_body.get("status")
-
-    if (status3 != "assigned"):
-        return "Fail7"
-
-    if (agent_id3 != 201):
-        return "Fail8"
-
-    thread = [0 for i in range(10)]
-
-    ### Parallel Execution Begins ###
-    for i in range(10):
-        thread[i] = Thread(target=t1, kwargs={"result": result, "id": i, "orderId": orderId})
-
-    for i in range(10):
-        thread[i].start()
-
-    for i in range(10):
-        thread[i].join()
+    thread1.join()
+    thread2.join()
 
     ### Parallel Execution Ends ###
 
-    for i in range(10):
-        if result[i].status_code != HTTPStatus.CREATED:
-            return "Fail9"
+    # One of the orders must be created
+    if (result["1"].status_code != HTTPStatus.CREATED or result["2"].status_code != HTTPStatus.CREATED):
+        return "Fail1"
 
+    cust301_final_balance = requests.get("http://localhost:8082/balance/301").json().get("balance")
+    cust302_final_balance = requests.get("http://localhost:8082/balance/302").json().get("balance")
 
-    # Get status of the second order
-    http_response = requests.get(f"http://localhost:8081/order/{orderId2}")
-
-    if(http_response.status_code != HTTPStatus.OK):
-        return 'Fail10'
-
-    res_body = http_response.json()
-
-    status4 = res_body.get("status")
-
-    # The status of the second order should be assigned because the first order got delivered
-    # and there will be one available agent
-    if (status4 != "assigned"):
-        return "Fail11"
-
-    if (agent_id3 != 201):
-        return "Fail12"
+    # Check if the wallet balance is restored for the customers whose order request failed
+    if(result["1"].status_code == HTTPStatus.GONE):
+        if(cust301_final_balance!=cust301_initial_balance):
+            return "Fail2"
     
+    if(result["2"].status_code == HTTPStatus.GONE):
+        if(cust302_final_balance!=cust302_initial_balance):
+            return "Fail3"
+
     return 'Pass'
 
 

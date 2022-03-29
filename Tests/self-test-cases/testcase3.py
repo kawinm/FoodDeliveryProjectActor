@@ -1,81 +1,101 @@
 from http import HTTPStatus
+from threading import Thread
 import requests
 
-#  Check if a customer can make an order to a restaurant
-#  after certain amounts of money gets credited to his wallet.
+# Scenario:
+#  Check if the initial order is 1000 
+#  after reinitialization of Delivery service.
 
-Pass = 'Pass'
-Fail = 'Fail'
+# RESTAURANT SERVICE    : http://localhost:8080
+# DELIVERY SERVICE      : http://localhost:8081
+# WALLET SERVICE        : http://localhost:8082
+
 
 def test():
-    test_result = Pass
 
-    '''
-        Reinitialize all the servies.
-    '''
+    result = {}
+
+    # Reinitialize Restaurant service
     http_response = requests.post("http://localhost:8080/reInitialize")
-    if(http_response.status_code != HTTPStatus.CREATED):
-        test_result = Fail
+
+    # Reinitialize Delivery service
     http_response = requests.post("http://localhost:8081/reInitialize")
-    if(http_response.status_code != HTTPStatus.CREATED):
-        test_result = Fail
+
+    # Reinitialize Wallet service
     http_response = requests.post("http://localhost:8082/reInitialize")
-    if(http_response.status_code != HTTPStatus.CREATED):
-        test_result = Fail
 
-    #Get the initial Balance of the customer 301
-    http_response = requests.get("http://localhost:8082/balance/301")
-    if(http_response.status_code!=HTTPStatus.OK):
-        test_result = Fail
-        print("Fail1")
-    balance = http_response.json().get("balance")
-
-    # Deplete the balance of customer 301.
-    http_response = requests.post("http://localhost:8082/deductBalance",json={
-        "custId" : 301,
-        "amount" : balance
-    })
-    if(http_response.status_code != HTTPStatus.CREATED):
-        test_result = Fail
-        print("Fail2")
-    
-
-    # Let customer 301 make an order with insufficient balance.
+    # Customer 301 makes an order for total amount 230.
     http_response = requests.post("http://localhost:8081/requestOrder",json={
         "custId" : 301,
         "restId" : 101,
-        "itemId" : 1,
+        "itemId" : 2,
         "qty" : 1
-    })
-    print(http_response.status_code)
-    if(http_response.status_code != HTTPStatus.CREATED):
-        test_result = Fail
-        print("Fail3")
+    }) 
     
-    # Add some balance to the customer 301
-    http_response = requests.post("http://localhost:8082/addBalance",json={
-        "custId" : 301,
-        "amount" : balance
-    })
     if(http_response.status_code != HTTPStatus.CREATED):
-        test_result = Fail
-        print("Fail4")
+        return "Fail1"
 
-    # Let customer 301 make an order with sufficient balance.
+    # Check if the initial orderId is 1000
+    orderId = http_response.json().get("orderId")
+
+    if orderId != 1000:
+        return "Fail2"
+
+    # Customer 301 makes an order for total amount 230.
     http_response = requests.post("http://localhost:8081/requestOrder",json={
         "custId" : 301,
         "restId" : 101,
-        "itemId" : 1,
+        "itemId" : 2,
         "qty" : 1
-    })
-    if(http_response.status_code != HTTPStatus.CREATED):
-        test_result = Fail
-        print("Fail5")
+    }) 
     
+    if(http_response.status_code != HTTPStatus.CREATED):
+        return "Fail3"
 
-    return test_result
+    # Check if the subsequent orderId is 1001
+    orderId = http_response.json().get("orderId")
 
+    if orderId != 1001:
+        return "Fail4"
+
+    # Customer 301 makes an order for total amount 230.
+    http_response = requests.post("http://localhost:8081/requestOrder",json={
+        "custId" : 301,
+        "restId" : 101,
+        "itemId" : 2,
+        "qty" : 1
+    }) 
+    
+    if(http_response.status_code != HTTPStatus.CREATED):
+        return "Fail5"
+
+    # Check if the subsequent orderId is 1002
+    orderId = http_response.json().get("orderId")
+
+    if orderId != 1002:
+        return "Fail6"
+
+    # Reinitialize the Delivery service
+    http_response = requests.post("http://localhost:8081/reInitialize")
+
+    # Customer 301 makes an order for total amount 230.
+    http_response = requests.post("http://localhost:8081/requestOrder",json={
+        "custId" : 301,
+        "restId" : 101,
+        "itemId" : 2,
+        "qty" : 1
+    }) 
+    
+    if(http_response.status_code != HTTPStatus.CREATED):
+        return "Fail7"
+
+    # Check if the initial orderId after reinitialization is 1000
+    orderId = http_response.json().get("orderId")
+
+    if orderId != 1000:
+        return "Fail8"
+
+    return "Pass"
 
 if __name__ == "__main__":
-    test_result = test()
-    print(test_result)
+    print(test())

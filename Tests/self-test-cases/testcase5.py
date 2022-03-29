@@ -1,76 +1,95 @@
 from http import HTTPStatus
+from threading import Thread
 import requests
-from helper.helper import *
 
-# Check if the agentId field in JSON response of OrderStatus is correct in the scenarios
-# 1. An agent has not been assigned to an order
-# 2. The available agent having lowest id is assigned to the order.
+# Scenario:
+#  Check if the orderId and status code in the response of 
+#  endpoint /order/num is correct.
 
-# M
+# RESTAURANT SERVICE    : http://localhost:8080
+# DELIVERY SERVICE      : http://localhost:8081
+# WALLET SERVICE        : http://localhost:8082
 
-Pass = 'Pass'
-Fail = 'Fail'
 
 def test():
-    test_result = Pass
 
-    '''
-        Reinitialize all the servies.
-    '''
+    result = {}
+
+    # Reinitialize Restaurant service
     http_response = requests.post("http://localhost:8080/reInitialize")
-    if(http_response.status_code != HTTPStatus.CREATED):
-        test_result = Fail
+
+    # Reinitialize Delivery service
     http_response = requests.post("http://localhost:8081/reInitialize")
-    if(http_response.status_code != HTTPStatus.CREATED):
-        test_result = Fail
+
+    # Reinitialize Wallet service
     http_response = requests.post("http://localhost:8082/reInitialize")
+
+    # Customer 301 makes an order for total amount 230.
+    http_response = requests.post("http://localhost:8081/requestOrder",json={
+        "custId" : 301,
+        "restId" : 101,
+        "itemId" : 2,
+        "qty" : 1
+    }) 
+    
     if(http_response.status_code != HTTPStatus.CREATED):
-        test_result = Fail
+        return "Fail1"
 
-    #Customer 301 makes an order
-    test_result,order_id1 = createOrder(301,101)
-    if(test_result==Fail):
-        return Fail
+    # Check if the initial orderId is 1000
+    orderId = http_response.json().get("orderId")
+
+    if orderId != 1000:
+        return "Fail2"
+
+    # Customer 301 makes an order for total amount 230.
+    http_response = requests.post("http://localhost:8081/requestOrder",json={
+        "custId" : 301,
+        "restId" : 101,
+        "itemId" : 2,
+        "qty" : 1
+    }) 
     
-    #Check the created order is unassigned
-    status = checkOrderStatus(order_id1,"unassigned")
-    if status==False:
-        return Fail
+    if(http_response.status_code != HTTPStatus.CREATED):
+        return "Fail3"
 
-    # Check if the agentId field is -1 for an unassigned order
-    status = checkOrderAssignedAgent(order_id1,-1)
-    if status  == False:
-        return Fail
+    # Check if the subsequent orderId is 1001
+    orderId = http_response.json().get("orderId")
+
+    if orderId != 1001:
+        return "Fail4"
+
+    # Customer 301 makes an order for total amount 230.
+    http_response = requests.post("http://localhost:8081/requestOrder",json={
+        "custId" : 301,
+        "restId" : 101,
+        "itemId" : 2,
+        "qty" : 1
+    }) 
     
+    if(http_response.status_code != HTTPStatus.CREATED):
+        return "Fail5"
 
-    agent1 = 201
-    agent2 = 202
-    # Agent 201 signs in 
-    http_response = requests.post(
-        "http://localhost:8081/agentSignIn", json={"agentId": agent2})
+    # Check if the subsequent orderId is 1002
+    orderId = http_response.json().get("orderId")
 
-    #Agent 202 signs in
-    http_response = requests.post(
-        "http://localhost:8081/agentSignIn", json={"agentId": agent1})
-    
-    # Check the status of the order must be assigned as agents signed in
-    status = checkOrderStatus(order_id1,"assigned")
-    if status==False:
-        return Fail
-    
-    # The agent assigned to the new order must be 202 as he signed in first
-    status = checkOrderAssignedAgent(order_id1,agent2)
-    if status  == False:
-        return Fail
-    
-    # The status of 201 must be available
-    status = checkAgentStatus(agent1,"available")
-    if status == False:
-        return Fail
+    if orderId != 1002:
+        return "Fail6"
 
-    return test_result
+    # Check the status of Order Id 1000
+    http_response = requests.get(
+        f"http://localhost:8081/order/"+str(orderId))
 
+    order = http_response.json().get("orderId")
+
+    # Check if status is unassigned
+    if orderId != order:
+        return "Fail7"  
+
+    if(http_response.status_code != HTTPStatus.OK):
+        return "Fail8"
+
+
+    return "Pass"
 
 if __name__ == "__main__":
-    test_result = test()
-    print(test_result)
+    print(test())

@@ -1,53 +1,88 @@
 from http import HTTPStatus
+from threading import Thread
 import requests
-from helper.helper import *
 
-# Check if the status of an unassigned order
-# is unassigned even after calling the /orderDelivered endpoint
+# Scenario:
+#  Check if the status code for the reinitialization request 
+#  is 201.
 
-# M
+# RESTAURANT SERVICE    : http://localhost:8080
+# DELIVERY SERVICE      : http://localhost:8081
+# WALLET SERVICE        : http://localhost:8082
 
-Pass = 'Pass'
-Fail = 'Fail'
 
 def test():
-    test_result = Pass
 
-    '''
-        Reinitialize all the servies.
-    '''
+    result = {}
+
+    # Reinitialize Restaurant service
     http_response = requests.post("http://localhost:8080/reInitialize")
-    if(http_response.status_code != HTTPStatus.CREATED):
-        test_result = Fail
+
+    # Reinitialize Delivery service
     http_response = requests.post("http://localhost:8081/reInitialize")
-    if(http_response.status_code != HTTPStatus.CREATED):
-        test_result = Fail
+
+    # Reinitialize Wallet service
     http_response = requests.post("http://localhost:8082/reInitialize")
-    if(http_response.status_code != HTTPStatus.CREATED):
-        test_result = Fail
 
-    #Customer 301 makes an order
-    test_result,order_id1 = createOrder(301,101)
-    if(test_result==Fail):
-        return Fail
+    # Customer 301 makes an order for total amount 230.
+    http_response = requests.post("http://localhost:8081/requestOrder",json={
+        "custId" : 301,
+        "restId" : 101,
+        "itemId" : 2,
+        "qty" : 1
+    }) 
     
-    #Check the created order is unassigned
-    status = checkOrderStatus(order_id1,"unassigned")
-    if status==False:
-        return Fail
-
-    http_response = requests.post("http://localhost:8081/orderDelivered", json={
-        "orderId" : order_id1
-    })
     if(http_response.status_code != HTTPStatus.CREATED):
-        return Fail
-    
-    status = checkOrderStatus(order_id1,"unassigned")
-    if status==False:
-        return Fail
+        return "Fail1"
 
-    return Pass
+    # Check if the initial orderId is 1000
+    orderId = http_response.json().get("orderId")
+
+    if orderId != 1000:
+        return "Fail2"
+
+    # Customer 301 makes an order for total amount 230.
+    http_response = requests.post("http://localhost:8081/requestOrder",json={
+        "custId" : 301,
+        "restId" : 101,
+        "itemId" : 2,
+        "qty" : 1
+    }) 
+    
+    if(http_response.status_code != HTTPStatus.CREATED):
+        return "Fail3"
+
+    # Check if the subsequent orderId is 1001
+    orderId = http_response.json().get("orderId")
+
+    if orderId != 1001:
+        return "Fail4"
+
+    # Customer 301 makes an order for total amount 230.
+    http_response = requests.post("http://localhost:8081/requestOrder",json={
+        "custId" : 301,
+        "restId" : 101,
+        "itemId" : 2,
+        "qty" : 1
+    }) 
+    
+    if(http_response.status_code != HTTPStatus.CREATED):
+        return "Fail5"
+
+    # Check if the subsequent orderId is 1002
+    orderId = http_response.json().get("orderId")
+
+    if orderId != 1002:
+        return "Fail6"
+
+    # Reinitialize the Delivery service
+    http_response = requests.post("http://localhost:8081/reInitialize")
+    
+    if(http_response.status_code != HTTPStatus.CREATED):
+        return "Fail7"
+
+
+    return "Pass"
 
 if __name__ == "__main__":
-    test_result = test()
-    print(test_result)
+    print(test())
