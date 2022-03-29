@@ -27,6 +27,7 @@ def test():
     http_response = requests.get("http://localhost:8082/balance/301")
     if(http_response.status_code!=HTTPStatus.OK):
         test_result = Fail
+        print("Fail1")
     balance = http_response.json().get("balance")
 
     # Deplete the balance of customer 301.
@@ -36,6 +37,7 @@ def test():
     })
     if(http_response.status_code != HTTPStatus.CREATED):
         test_result = Fail
+        print("Fail2")
     
 
     # Let customer 301 make an order with insufficient balance.
@@ -45,8 +47,10 @@ def test():
         "itemId" : 1,
         "qty" : 1
     })
-    if(http_response.status_code != HTTPStatus.GONE):
+    print(http_response.status_code)
+    if(http_response.status_code != HTTPStatus.CREATED):
         test_result = Fail
+        print("Fail3")
     
     # Add some balance to the customer 301
     http_response = requests.post("http://localhost:8082/addBalance",json={
@@ -55,6 +59,7 @@ def test():
     })
     if(http_response.status_code != HTTPStatus.CREATED):
         test_result = Fail
+        print("Fail4")
 
     # Let customer 301 make an order with sufficient balance.
     http_response = requests.post("http://localhost:8081/requestOrder",json={
@@ -65,6 +70,7 @@ def test():
     })
     if(http_response.status_code != HTTPStatus.CREATED):
         test_result = Fail
+        print("Fail5")
     
 
     return test_result
