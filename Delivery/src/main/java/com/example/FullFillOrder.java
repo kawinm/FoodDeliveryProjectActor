@@ -161,7 +161,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
                     e.printStackTrace();
         }
 
-        if(response.statusCode()==410)
+        if (response.statusCode() == 410 )
         {
             System.out.println("Insufficient stock");
             request = HttpRequest.newBuilder()
@@ -183,7 +183,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
             }
             return this;
         }        
-        System.out.println("");
+        System.out.println("Order request accepted");
         this.status = Constants.ORDER_DELIVERED;  
         return this;      
     }
