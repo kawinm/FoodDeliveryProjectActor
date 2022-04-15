@@ -268,6 +268,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         }
         ActorRef<FullFillOrder.FullFillOrderCommand> order = orderRef.get(orderSuccessMessage.orderId);
         this.pendingOrderRef.add(order);
+        System.out.println("Order waiting for agents");
         return this;
     }
 

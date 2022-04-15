@@ -143,7 +143,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         if(response.statusCode()==410)
         {
             System.out.println("Insufficient balance");
-
+            this.status = Constants.ORDER_REJECTED;
             return this;
         } 
         request = HttpRequest.newBuilder()
@@ -183,10 +183,11 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
             {
                 e.printStackTrace();
             }
+            this.status=Constants.ORDER_REJECTED;
             return this;
         }        
         System.out.println("Order request accepted");
-        this.status = Constants.ORDER_DELIVERED;  
+        this.status = Constants.ORDER_UNASSIGNED;  
         return this;      
     }
 
