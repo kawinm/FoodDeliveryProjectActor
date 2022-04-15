@@ -200,13 +200,13 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         
         OrderStatus statusResponse;
         if (status == Constants.ORDER_ASSIGNED) {
-            statusResponse = new OrderStatus(orderId, "assigned");
+            statusResponse = new OrderStatus(orderId, "assigned",-1l);
         }
         else if (status == Constants.ORDER_UNASSIGNED) {
-            statusResponse = new OrderStatus(orderId, "unassigned");
+            statusResponse = new OrderStatus(orderId, "unassigned",-1l);
         }
         else {
-            statusResponse = new OrderStatus(orderId, "delivered");
+            statusResponse = new OrderStatus(orderId, "delivered",-1l);
         }
         orderStatus.client.tell(new ClientStatusResponse(true, statusResponse));
         return this;
