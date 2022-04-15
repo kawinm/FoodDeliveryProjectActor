@@ -207,8 +207,11 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         else if (status == Constants.ORDER_UNASSIGNED) {
             statusResponse = new OrderStatus(orderId, "unassigned",-1l);
         }
-        else {
+        else if(status == Constants.ORDER_DELIVERED){
             statusResponse = new OrderStatus(orderId, "delivered",-1l);
+        }
+        else {
+            statusResponse = new OrderStatus(orderId,"rejected",-1l);
         }
         orderStatus.client.tell(new ClientStatusResponse(true, statusResponse));
         return this;
