@@ -29,8 +29,10 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     HashMap<Item, Long> itemMap;
     HashMap<Long, ActorRef<Agent.AgentCommand>> agentRef;
     HashMap<Long, ActorRef<FullFillOrder.FullFillOrderCommand>> orderRef;
-    Long currentOrderId = 1000L;
+    List<ActorRef<FullFillOrder.FullFillOrderCommand>> pendingOrderRef;
     
+    Long currentOrderId = 1000L;
+    Long version = 0l;
 
     // Define the message type which 
     // actor can process
@@ -115,6 +117,17 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         }
     }
 
+    // Order Success Message
+    public static class OrderSuccessMessage implements DeliveryCommand {
+        Long version;
+        Long orderId;
+
+        public OrderSuccessMessage(Long version, Long orderId) {
+            this.version = version;
+            this.orderId = orderId;
+        }
+    }
+
     // Reply messages to the client
     public static class ClientResponse
     {
@@ -141,6 +154,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         this.itemMap = itemMap;
         this.agentRef = agentRef;
         this.orderRef = new HashMap<>();
+        this.pendingOrderRef = new ArrayList<>();
     }
 
     // Create method to spawn an actor
@@ -160,6 +174,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
        .onMessage(OrderStatusMessage.class, this::onOrderStatusMessage)
        .onMessage(AgentStatusMessage.class, this::onAgentStatusMessage)
        .onMessage(ReinitializeMessage.class, this::onReinitializeMessage)
+       .onMessage(OrderSuccessMessage.class, this::)
        .build();
     }
 
@@ -239,11 +254,22 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
             orderRef.get(orderId).tell(new FullFillOrder.StopMessage());
             orderRef.remove(orderId);
         }
-
+        this.version +=1;
         currentOrderId = 1000L;
         reinit.client.tell(new ClientResponse(""));
         
         return this;
      }
+
+    public Behavior<DeliveryCommand> onOrderSuccessMessage(OrderSuccessMessage orderSuccessMessage) {
+        if(orderSuccessMessage.version!= this.version)
+        {
+            return this;
+        }
+        ActorRef<FullFillOrder.FullFillOrderCommand> order = orderRef.get(orderSuccessMessage.orderId);
+        this.pendingOrderRef.add(order);
+        
+        return this;
+    }
 
 }
