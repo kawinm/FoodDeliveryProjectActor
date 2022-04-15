@@ -33,7 +33,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     List<ActorRef<FullFillOrder.FullFillOrderCommand>> pendingOrderRef;
     
     Long currentOrderId = 1000L;
-    Long version = 0l;
+    Long version;
 
     // Define the message type which 
     // actor can process
@@ -152,6 +152,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     //Constructor
     public Delivery(ActorContext<DeliveryCommand> context, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentRef) {
         super(context);
+        this.version=0l;
         this.itemMap = itemMap;
         this.agentRef = agentRef;
         this.orderRef = new HashMap<>();
@@ -184,7 +185,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     // Define Signal Handler for Request Order Message
     public Behavior<DeliveryCommand> onRequestOrderMessage(RequestOrderMessage requestOrder) {
 
-        ActorRef<FullFillOrder.FullFillOrderCommand> orderActor = getContext().spawn(FullFillOrder.create(currentOrderId, requestOrder.order, Constants.ORDER_UNASSIGNED, itemMap, agentRef), "order_"+currentOrderId);
+        ActorRef<FullFillOrder.FullFillOrderCommand> orderActor = getContext().spawn(FullFillOrder.create( this.version,currentOrderId,requestOrder.order, Constants.ORDER_UNASSIGNED, itemMap, agentRef), "order_"+currentOrderId);
         requestOrder.client.tell(new RequestOrderResponse(new OrderIdResponse(currentOrderId)));
         orderRef.put(currentOrderId++, orderActor);
         //System.out.println(requestOrder.order.getCustId());
