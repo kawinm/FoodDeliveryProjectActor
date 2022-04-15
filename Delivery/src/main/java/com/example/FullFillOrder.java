@@ -23,6 +23,7 @@ import com.example.models.OrderStatus;
 public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderCommand> {
     
     //Define members 
+    Long deliveryVersion;
     Long orderId;
     Order order;
     int status;
@@ -79,8 +80,9 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     }
     
     //Constructor
-    public FullFillOrder(ActorContext<FullFillOrderCommand> context, Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap) {
+    public FullFillOrder(ActorContext<FullFillOrderCommand> context, Long version, Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap) {
         super(context);
+        this.deliveryVersion = version;
         this.orderId = orderId;
         this.order = order;
         this.status = status;
@@ -89,9 +91,9 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     }
 
     // Create method to spawn an actor
-    public static Behavior<FullFillOrderCommand> create(Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap) {   
+    public static Behavior<FullFillOrderCommand> create(Long version,Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap) {   
 
-        return Behaviors.setup(context -> new FullFillOrder(context, orderId, order, status, itemMap, agentMap));
+        return Behaviors.setup(context -> new FullFillOrder(context,version, orderId, order, status, itemMap, agentMap));
     }
 
     //Create Receive Method

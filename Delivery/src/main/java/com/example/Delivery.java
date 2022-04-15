@@ -183,7 +183,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     // Define Signal Handler for Request Order Message
     public Behavior<DeliveryCommand> onRequestOrderMessage(RequestOrderMessage requestOrder) {
 
-        ActorRef<FullFillOrder.FullFillOrderCommand> orderActor = getContext().spawn(FullFillOrder.create(currentOrderId, requestOrder.order, Constants.ORDER_UNASSIGNED, itemMap, agentRef), "order_"+currentOrderId);
+        ActorRef<FullFillOrder.FullFillOrderCommand> orderActor = getContext().spawn(FullFillOrder.create(this.version, requestOrder.order, Constants.ORDER_UNASSIGNED, itemMap, agentRef), "order_"+currentOrderId);
         requestOrder.client.tell(new RequestOrderResponse(new OrderIdResponse(currentOrderId)));
         orderRef.put(currentOrderId++, orderActor);
         //System.out.println(requestOrder.order.getCustId());
