@@ -174,7 +174,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
        .onMessage(OrderStatusMessage.class, this::onOrderStatusMessage)
        .onMessage(AgentStatusMessage.class, this::onAgentStatusMessage)
        .onMessage(ReinitializeMessage.class, this::onReinitializeMessage)
-       .onMessage(OrderSuccessMessage.class, this::)
+       .onMessage(OrderSuccessMessage.class, this::onOrderSuccessMessage)
        .build();
     }
 
