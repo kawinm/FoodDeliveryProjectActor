@@ -29,6 +29,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     
     //Define members 
     Long deliveryVersion;
+    ActorRef<Delivery.DeliveryCommand> delivery;
     Long orderId;
     Order order;
     int status;
@@ -103,7 +104,12 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
 
 
     //Constructor
+<<<<<<< HEAD
     public FullFillOrder(ActorContext<FullFillOrderCommand> context, Long version, Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap, ActorRef<Delivery.DeliveryCommand> deliveryRef) {
+=======
+    //Constructor
+    public FullFillOrder(ActorContext<FullFillOrderCommand> context, Long version, Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap) {
+>>>>>>> 25dcc700e8e3b07d76f6d73319dcfadf2f2fb3c3
         super(context);
         this.deliveryVersion = version;
         this.orderId = orderId;
@@ -116,9 +122,15 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     }
 
     // Create method to spawn an actor
+<<<<<<< HEAD
     public static Behavior<FullFillOrderCommand> create(Long version,Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap, ActorRef<Delivery.DeliveryCommand> deliveryRef) {   
 
         return Behaviors.setup(context -> new FullFillOrder(context,version, orderId, order, status, itemMap, agentMap, deliveryRef));
+=======
+    public static Behavior<FullFillOrderCommand> create(Long version, Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap) {   
+
+        return Behaviors.setup(context -> new FullFillOrder(context, version,orderId, order, status, itemMap, agentMap));
+>>>>>>> 25dcc700e8e3b07d76f6d73319dcfadf2f2fb3c3
     }
 
     //Create Receive Method
@@ -169,7 +181,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         if(response.statusCode()==410)
         {
             System.out.println("Insufficient balance");
-
+            this.status = Constants.ORDER_REJECTED;
             return this;
         } 
         request = HttpRequest.newBuilder()
@@ -209,9 +221,11 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
             {
                 e.printStackTrace();
             }
+            this.status=Constants.ORDER_REJECTED;
             return this;
         }        
         System.out.println("Order request accepted");
+<<<<<<< HEAD
         this.status = Constants.ORDER_UNASSIGNED;
 
         // Iterating through Hashmap
@@ -221,6 +235,9 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         }
  
 
+=======
+        this.status = Constants.ORDER_UNASSIGNED;  
+>>>>>>> 25dcc700e8e3b07d76f6d73319dcfadf2f2fb3c3
         return this;      
     }
 
@@ -241,8 +258,11 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         else if (status == Constants.ORDER_UNASSIGNED) {
             statusResponse = new OrderStatus(orderId, "unassigned",-1l);
         }
-        else {
+        else if(status == Constants.ORDER_DELIVERED){
             statusResponse = new OrderStatus(orderId, "delivered",-1l);
+        }
+        else {
+            statusResponse = new OrderStatus(orderId,"rejected",-1l);
         }
         orderStatus.client.tell(new ClientStatusResponse(true, statusResponse));
         return this;

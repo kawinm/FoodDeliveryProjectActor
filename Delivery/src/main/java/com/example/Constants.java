@@ -9,5 +9,6 @@ public class Constants
     public static final int ORDER_UNASSIGNED    = 0;
     public static final int ORDER_ASSIGNED      = 1;
     public static final int ORDER_DELIVERED     = 2;
+    public static final int ORDER_REJECTED      = 3;
 
 }
