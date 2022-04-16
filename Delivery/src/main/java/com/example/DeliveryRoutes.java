@@ -89,7 +89,7 @@ public class DeliveryRoutes {
             )
         )
       ),
-      /*path("agentSignIn",() ->
+      path("agentSignIn",() ->
         post(() -> entity(
           Jackson.unmarshaller(AgentStatus.class),
           agentstatus ->
@@ -142,7 +142,7 @@ public class DeliveryRoutes {
           });
           }
         )
-      ),*/
+      ),
       path(PathMatchers.segment("order")
         .slash(PathMatchers.longSegment()), orderId -> get(() -> {
 

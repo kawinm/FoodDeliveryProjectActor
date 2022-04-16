@@ -22,6 +22,11 @@ import akka.japi.pf.ReceiveBuilder;
 import akka.stream.Client;
 import akka.actor.typed.javadsl.Behaviors;
 
+import java.util.*;
+
+//import com.example.FullFillOrder;
+//import com.example.Agent;
+
 
 public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     
@@ -147,6 +152,17 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
             this.response = response;
         }
     }
+
+    /* Notify and Renotify Agent to Orders */
+
+    public static class ReNotifyAgentMessage implements DeliveryCommand {
+
+        Long agentId, orderId;
+        public ReNotifyAgentMessage(Long agentId, Long orderId) {
+            this.agentId = agentId;
+            this.orderId = orderId;
+        }
+    }
     
     //Constructor
     public Delivery(ActorContext<DeliveryCommand> context, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentRef) {
@@ -183,7 +199,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     // Define Signal Handler for Request Order Message
     public Behavior<DeliveryCommand> onRequestOrderMessage(RequestOrderMessage requestOrder) {
 
-        ActorRef<FullFillOrder.FullFillOrderCommand> orderActor = getContext().spawn(FullFillOrder.create(this.version, requestOrder.order, Constants.ORDER_UNASSIGNED, itemMap, agentRef), "order_"+currentOrderId);
+        ActorRef<FullFillOrder.FullFillOrderCommand> orderActor = getContext().spawn(FullFillOrder.create(this.version, currentOrderId, requestOrder.order, Constants.ORDER_UNASSIGNED, itemMap, agentRef, getContext().getSelf()), "order_"+currentOrderId);
         requestOrder.client.tell(new RequestOrderResponse(new OrderIdResponse(currentOrderId)));
         orderRef.put(currentOrderId++, orderActor);
         //System.out.println(requestOrder.order.getCustId());

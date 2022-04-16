@@ -12,13 +12,18 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
+import java.util.List;
 import java.net.URI;
 import java.io.*;
+import java.util.*;
 
 import com.example.models.Item;
 import com.example.models.Order;
 import com.example.models.OrderStatus;
+import com.example.models.AgentStatus;
 
+//import com.example.Delivery;
+//import com.example.Agent;
 
 public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderCommand> {
     
@@ -29,6 +34,10 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     int status;
     HashMap<Item, Long> itemMap;
     HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap;
+    
+    ActorRef<Delivery.DeliveryCommand> deliveryRef;
+
+    List<Long> waitingNotifyAgents;
 
     // Define the message type which 
     // actor can process
@@ -79,8 +88,22 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         }
     }
     
+    /* Messages for Assigning Agent */
+
+    // Agent Status Response Message (From Agent)
+    public static class RequestAgentStatusResponse implements FullFillOrderCommand { 
+
+        Long agentId;
+        int agentStatus;
+        public RequestAgentStatusResponse(Long agentId, int agentStatus) {
+            this.agentId = agentId;
+            this.agentStatus = agentStatus;
+        }
+    }
+
+
     //Constructor
-    public FullFillOrder(ActorContext<FullFillOrderCommand> context, Long version, Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap) {
+    public FullFillOrder(ActorContext<FullFillOrderCommand> context, Long version, Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap, ActorRef<Delivery.DeliveryCommand> deliveryRef) {
         super(context);
         this.deliveryVersion = version;
         this.orderId = orderId;
@@ -88,12 +111,14 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         this.status = status;
         this.itemMap = itemMap;
         this.agentMap = agentMap;
+        this.waitingNotifyAgents = new ArrayList<Long>();
+        this.deliveryRef = deliveryRef;
     }
 
     // Create method to spawn an actor
-    public static Behavior<FullFillOrderCommand> create(Long version,Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap) {   
+    public static Behavior<FullFillOrderCommand> create(Long version,Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap, ActorRef<Delivery.DeliveryCommand> deliveryRef) {   
 
-        return Behaviors.setup(context -> new FullFillOrder(context,version, orderId, order, status, itemMap, agentMap));
+        return Behaviors.setup(context -> new FullFillOrder(context,version, orderId, order, status, itemMap, agentMap, deliveryRef));
     }
 
     //Create Receive Method
@@ -104,6 +129,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
        .onMessage(InitiateOrder.class, this::onInitiateOrder)
        .onMessage(OrderStatusMessage.class, this::onOrderStatusMessage)
        .onMessage(StopMessage.class, this::onPostStop)
+       .onMessage(RequestAgentStatusResponse.class, this::onRequestAgentStatusResponse)
        .build();
     }
 
@@ -186,7 +212,15 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
             return this;
         }        
         System.out.println("Order request accepted");
-        this.status = Constants.ORDER_DELIVERED;  
+        this.status = Constants.ORDER_UNASSIGNED;
+
+        // Iterating through Hashmap
+        for (Map.Entry<Long, ActorRef<Agent.AgentCommand>> entry : agentMap.entrySet()) {
+
+            entry.getValue().tell(new Agent.RequestAgentStatusMessage(getContext().getSelf()));
+        }
+ 
+
         return this;      
     }
 
@@ -219,4 +253,47 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         return Behaviors.stopped();
       }
 
+    // Define Signal Handler for Request Agent Status Response Message
+    public Behavior<FullFillOrderCommand> onRequestAgentStatusResponse(RequestAgentStatusResponse agentResponse) {
+
+        if (agentResponse.agentStatus == Constants.AGENT_AVAILABLE) {
+            this.status = Constants.ORDER_ASSIGNED;
+            
+            agentMap.get(agentResponse.agentId).tell(new Agent.AckMessage(getContext().getSelf()));
+
+            for (Long agentId : waitingNotifyAgents) {
+
+                deliveryRef.tell(new Delivery.ReNotifyAgentMessage(agentId, this.orderId));
+
+            }
+        } 
+
+        else if (!waitingNotifyAgents.isEmpty()) {
+
+
+            agentMap.get(waitingNotifyAgents.get(0)).tell(new Agent.RequestAgentStatusMessage(getContext().getSelf()));
+
+            waitingNotifyAgents.remove(0);
+
+        }
+
+        else {
+
+            // Iterating through Hashmap
+            for (Map.Entry<Long, ActorRef<Agent.AgentCommand>> entry : agentMap.entrySet()) {
+
+                if ((long) entry.getKey() <= (long) agentResponse.agentId) {
+                    continue;
+                }
+
+                entry.getValue().tell(new Agent.RequestAgentStatusMessage(getContext().getSelf()));
+
+                break;
+            }
+
+
+        }
+        return this;
+
+    }
 }

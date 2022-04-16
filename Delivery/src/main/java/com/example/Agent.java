@@ -2,6 +2,8 @@ package com.example;
 
 import akka.actor.typed.javadsl.ActorContext;
 
+import java.util.ArrayList;
+
 import com.example.models.AgentStatus;
 
 import akka.actor.typed.ActorRef;
@@ -12,6 +14,10 @@ import akka.japi.pf.ReceiveBuilder;
 import ch.qos.logback.core.joran.conditional.ElseAction;
 import akka.actor.typed.javadsl.Behaviors;
 
+//import com.example.Delivery;
+//import com.example.FullFillOrder;
+
+import java.util.*;
 
 public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     
@@ -20,6 +26,10 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     int status;
 
     int SignOutLock;
+
+    int assignmentLock;
+
+    List<ActorRef<FullFillOrder.FullFillOrderCommand>> waitingOrders;
 
     // Define the message type which 
     // actor can process
@@ -55,6 +65,30 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
         }
     }
 
+    /* Messages for Assigning Agent to an Order */
+
+    // Request Agent Status Message (From FFO)
+    public static class RequestAgentStatusMessage implements AgentCommand { 
+        
+        ActorRef<FullFillOrder.FullFillOrderCommand> order;
+
+        public RequestAgentStatusMessage(ActorRef<FullFillOrder.FullFillOrderCommand> order) {
+            this.order = order;
+        }
+    }
+
+    // Acknowledge Agent Assignment Message (From FFO)
+    public static class AckMessage implements AgentCommand { 
+        
+        ActorRef<FullFillOrder.FullFillOrderCommand> order;
+
+        public AckMessage(ActorRef<FullFillOrder.FullFillOrderCommand> order) {
+            this.order = order;
+        }
+    }
+
+    /* */
+
     public static class GetAgentStatusResponse {
         AgentStatus agentStatus;
         
@@ -71,6 +105,7 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
         this.agentId = agentId;
         this.status = status;
         this.SignOutLock = 0;
+        this.waitingOrders = new ArrayList<ActorRef<FullFillOrder.FullFillOrderCommand>>();
     }
 
     // Create method to spawn an actor
@@ -86,6 +121,8 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
        .onMessage(AgentSignInMessage.class, this::onAgentSignInMessage)
        .onMessage(AgentSignOutMessage.class, this::onAgentSignOutMessage)
        .onMessage(GetAgentStatusMessage.class, this::onGetAgentStatusMessage)
+       .onMessage(RequestAgentStatusMessage.class, this::onRequestAgentStatusMessage)
+       .onMessage(AckMessage.class, this::onAckMessage)
        .build();
     }
 
@@ -94,8 +131,8 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     // Define Signal Handler for Agent SignIn Message
     public Behavior<AgentCommand> onAgentSignInMessage(AgentSignInMessage agentSignIn) {
 
-        if (status == Constants.AGENT_SIGNED_OUT) {
-            status = Constants.AGENT_AVAILABLE;
+        if (this.status == Constants.AGENT_SIGNED_OUT) {
+            this.status = Constants.AGENT_AVAILABLE;
         }
 
         return this;
@@ -105,6 +142,9 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     public Behavior<AgentCommand> onAgentSignOutMessage(AgentSignOutMessage agentSignOut) {
 
         this.SignOutLock = 0;
+
+        // *** Verify ***
+        this.status = Constants.AGENT_SIGNED_OUT;
 
         System.out.println(agentSignOut.agentId);
         return this;
@@ -130,4 +170,34 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
         return this;
      }
 
+    public Behavior<AgentCommand> onRequestAgentStatusMessage(RequestAgentStatusMessage requestAgentStatus) {
+
+        if (this.assignmentLock == 1) {
+
+            this.waitingOrders.add(requestAgentStatus.order);
+        } 
+        else if (this.status == Constants.AGENT_SIGNED_OUT || this.status == Constants.AGENT_UNAVAILABLE) {
+
+            requestAgentStatus.order.tell(new FullFillOrder.RequestAgentStatusResponse(this.agentId, this.status));
+        }
+        else {
+            this.assignmentLock = 1;
+            requestAgentStatus.order.tell(new FullFillOrder.RequestAgentStatusResponse(this.agentId, this.status));
+        }
+
+        return this;
+    }
+
+    public Behavior<AgentCommand> onAckMessage(AckMessage ackOrder) {
+        
+        this.status = Constants.AGENT_UNAVAILABLE;
+        this.assignmentLock = 0;
+
+        for (ActorRef<FullFillOrder.FullFillOrderCommand> orders: this.waitingOrders) {
+            orders.tell(new FullFillOrder.RequestAgentStatusResponse(this.agentId, this.status));
+
+        }
+
+        return this;
+    }
 }
