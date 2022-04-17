@@ -84,14 +84,14 @@ public class QuickstartApp {
                 if (count == 1) {
                     Long agentId = Long.parseLong(str);
                     agentIds.add(agentId);
-                    ActorRef<Agent.AgentCommand> agentActor = context.spawn(Agent.create(agentId, Constants.AGENT_SIGNED_OUT), "agent_"+agentId);
+                    ActorRef<Agent.AgentCommand> agentActor = context.spawn(Agent.create(agentId, Constants.AGENT_SIGNED_OUT,0l), "agent_v0_"+agentId);
                     agentRefs.put(agentId,agentActor);
                 }
                     
             }
             sc.close();
 
-            ActorRef<Delivery.DeliveryCommand> deliveryActor = context.spawn(Delivery.create(itemMap, agentRefs), "delivery_main");
+            ActorRef<Delivery.DeliveryCommand> deliveryActor = context.spawn(Delivery.create(itemMap, agentRefs,agentIds), "delivery_main");
 
             // Sample message send
             //agentRefs.get(201l).tell(new Agent.SampleMessage("Hello from Agent 201"));

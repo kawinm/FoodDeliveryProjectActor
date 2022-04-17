@@ -24,6 +24,8 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     // Define members 
     Long agentId;
     int status;
+
+    Long deliveryVersion = 0l;
     ActorRef<Delivery.DeliveryCommand> deliveryActor;
 
     int SignOutLock;
@@ -114,19 +116,21 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     }
 
     //Constructor
-    public Agent(ActorContext<AgentCommand> context, Long agentId, int status) {
+    public Agent(ActorContext<AgentCommand> context, Long agentId, int status,Long version) {
         super(context);
         this.agentId = agentId;
         this.status = status;
+        this.deliveryVersion = version;
         this.SignOutLock = 0;
         this.waitingOrders = new ArrayList<ActorRef<FullFillOrder.FullFillOrderCommand>>();
         this.deliveryActor = null;
+        System.out.println(this.deliveryVersion);
     }
 
     // Create method to spawn an actor
-    public static Behavior<AgentCommand> create(Long agentId, int status) {   
+    public static Behavior<AgentCommand> create(Long agentId, int status, Long version) {   
 
-        return Behaviors.setup(context -> new Agent(context,agentId,status));
+        return Behaviors.setup(context -> new Agent(context,agentId,status,version));
     }
 
     //Create Receive Method
@@ -153,7 +157,7 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
             System.out.println(this.deliveryActor);
             this.status = Constants.AGENT_AVAILABLE;
             this.waitingOrders.clear();
-            this.deliveryActor.tell(new Delivery.AgentAvailableMessage(agentSignIn.agentId));
+            this.deliveryActor.tell(new Delivery.AgentAvailableMessage(agentSignIn.agentId,this.deliveryVersion));
         }
 
         return this;
@@ -252,7 +256,7 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
 
     public Behavior<AgentCommand> onFreeAgentMessage(FreeAgentMessage freeAgentMessage) {
         this.status = Constants.AGENT_AVAILABLE;
-        this.deliveryActor.tell(new Delivery.AgentAvailableMessage(this.agentId));
+        this.deliveryActor.tell(new Delivery.AgentAvailableMessage(this.agentId,this.deliveryVersion));
         return this;
     }
 

@@ -1,7 +1,7 @@
 package com.example;
 
 import akka.actor.typed.javadsl.ActorContext;
-
+import akka.actor.Actor;
 import akka.actor.typed.ActorRef;
 
 import java.lang.ref.Cleaner.Cleanable;
@@ -35,11 +35,12 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     HashMap<Item, Long> itemMap;
     HashMap<Long, ActorRef<Agent.AgentCommand>> agentRef;
     HashMap<Long, ActorRef<FullFillOrder.FullFillOrderCommand>> orderRef;
+    List<Long> agentsList;
     //List<ActorRef<FullFillOrder.FullFillOrderCommand>> pendingOrderRef;
     List<Long> pendingOrderRef;
     
     Long currentOrderId = 1000L;
-    Long version;
+    Long version=0l;
 
     // Define the message type which 
     // actor can process
@@ -149,8 +150,11 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
 
     public static class AgentAvailableMessage implements DeliveryCommand {
         Long agentId;
-        public AgentAvailableMessage(Long agentId) {
+        Long version;
+
+        public AgentAvailableMessage(Long agentId, Long version) {
             this.agentId = agentId;
+            this.version = version;
         }
     }
 
@@ -179,26 +183,30 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     public static class ReNotifyAgentMessage implements DeliveryCommand {
 
         Long agentId, orderId;
-        public ReNotifyAgentMessage(Long agentId, Long orderId) {
+        Long version;
+        public ReNotifyAgentMessage(Long agentId, Long orderId, Long version) {
             this.agentId = agentId;
             this.orderId = orderId;
+            this.version = version;
         }
     }
     
     //Constructor
-    public Delivery(ActorContext<DeliveryCommand> context, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentRef) {
+    public Delivery(ActorContext<DeliveryCommand> context, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentRef,List<Long> agentsList) {
         super(context);
         this.version=0l;
         this.itemMap = itemMap;
         this.agentRef = agentRef;
         this.orderRef = new HashMap<>();
         this.pendingOrderRef = new ArrayList<>();
+        this.agentsList = new ArrayList<>();
+        this.agentsList = agentsList;
     }
 
     // Create method to spawn an actor
-    public static Behavior<DeliveryCommand> create(HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentRef) {   
+    public static Behavior<DeliveryCommand> create(HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentRef, List<Long> agentsList) {   
 
-        return Behaviors.setup(context -> new Delivery(context,itemMap, agentRef));
+        return Behaviors.setup(context -> new Delivery(context,itemMap, agentRef,agentsList));
     }
 
     //Create Receive Method
@@ -224,7 +232,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     // Define Signal Handler for Request Order Message
     public Behavior<DeliveryCommand> onRequestOrderMessage(RequestOrderMessage requestOrder) {
 
-        ActorRef<FullFillOrder.FullFillOrderCommand> orderActor = getContext().spawn(FullFillOrder.create(this.version, currentOrderId, requestOrder.order, Constants.ORDER_UNASSIGNED, itemMap, agentRef, getContext().getSelf()), "order_"+currentOrderId);
+        ActorRef<FullFillOrder.FullFillOrderCommand> orderActor = getContext().spawn(FullFillOrder.create(this.version, currentOrderId, requestOrder.order, Constants.ORDER_UNASSIGNED, itemMap, agentRef, getContext().getSelf()), "order_v_"+ this.version +"_"+currentOrderId);
         requestOrder.client.tell(new RequestOrderResponse(new OrderIdResponse(currentOrderId)));
         orderRef.put(currentOrderId++, orderActor);
         //System.out.println(requestOrder.order.getCustId());
@@ -297,10 +305,22 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
             orderRef.get(orderId).tell(new FullFillOrder.StopMessage());
             orderRef.remove(orderId);
         }
+        this.orderRef.clear();
+        for(int i=0;i<agentsList.size();++i) {
+            ActorRef<Agent.AgentCommand> agent = this.agentRef.get(this.agentsList.get(i));
+            agent.tell(new Agent.StopMessage());
+        }
+        this.agentRef.clear();
         this.version +=1;
         currentOrderId = 1000L;
         reinit.client.tell(new ClientResponse(""));
-        
+
+        for(int i=0;i<this.agentsList.size();++i) { 
+            Long agentId = this.agentsList.get(i);
+            ActorRef<Agent.AgentCommand> agent = getContext().spawn(Agent.create(agentId,Constants.AGENT_SIGNED_OUT,this.version), "agent_v_"+this.version + "_" +agentId);
+            
+            this.agentRef.put(agentId, agent);
+        }
         return this;
      }
 
@@ -327,6 +347,9 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     }
 
     public Behavior<DeliveryCommand> onAgentAvailableMessage(AgentAvailableMessage agentAvailableMessage) {
+        if(agentAvailableMessage.version != this.version) {
+            return  this;
+        }
         if(!this.pendingOrderRef.isEmpty())
         {
             System.out.println("Pending order references there");
@@ -340,6 +363,10 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     }
 
     public Behavior<DeliveryCommand> onRenotifyAgentMesssage(ReNotifyAgentMessage reNotifyAgentMessage) {
+
+        if(reNotifyAgentMessage.version != this.version) {
+            return this;
+        }
         if(!this.pendingOrderRef.isEmpty()) {
             this.pendingOrderRef.remove(reNotifyAgentMessage.orderId);
             if(! this.pendingOrderRef.isEmpty()) {

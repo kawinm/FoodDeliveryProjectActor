@@ -293,7 +293,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
             this.deliveryRef.tell( new Delivery.GotAgentAssignedMessage(this.orderId,this.deliveryVersion));
             for (Long agentId : this.waitingNotifyAgents) {
 
-                deliveryRef.tell(new Delivery.ReNotifyAgentMessage(agentId, this.orderId));
+                deliveryRef.tell(new Delivery.ReNotifyAgentMessage(agentId, this.orderId,this.deliveryVersion));
 
             }
             this.waitingNotifyAgents.clear();
@@ -333,7 +333,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
 
     public Behavior<FullFillOrderCommand> onPingThisAgentMessage(PingthisAgentMessage pingthisAgentMessage) {
         if(this.status != Constants.ORDER_UNASSIGNED) {
-            this.deliveryRef.tell(new Delivery.ReNotifyAgentMessage(pingthisAgentMessage.agentId, this.orderId));
+            this.deliveryRef.tell(new Delivery.ReNotifyAgentMessage(pingthisAgentMessage.agentId, this.orderId,this.deliveryVersion));
         }
         if(this.waitingagentslock==0) {
             ActorRef<Agent.AgentCommand> agent = this.agentMap.get(pingthisAgentMessage.agentId);
