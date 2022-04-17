@@ -36,9 +36,10 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     Long agentId=-1l;
     HashMap<Item, Long> itemMap;
     HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap;
-    
+
     ActorRef<Delivery.DeliveryCommand> deliveryRef;
 
+    int waitingagentslock = 0;
     List<Long> waitingNotifyAgents;
 
     // Define the message type which 
@@ -103,6 +104,12 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         }
     }
 
+    public static class PingthisAgentMessage implements FullFillOrderCommand {
+        Long agentId;
+        public PingthisAgentMessage(Long agentId) { 
+            this.agentId = agentId;
+        }
+    }
 
     //Constructor
     public FullFillOrder(ActorContext<FullFillOrderCommand> context, Long version, Long orderId, Order order, int status, HashMap<Item, Long> itemMap, HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap, ActorRef<Delivery.DeliveryCommand> deliveryRef) {
@@ -116,6 +123,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         this.waitingNotifyAgents = new ArrayList<Long>();
         this.deliveryRef = deliveryRef;
         this.agentId=-1l;
+        this.waitingagentslock = 0;
     }
 
     // Create method to spawn an actor
@@ -133,6 +141,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
        .onMessage(OrderStatusMessage.class, this::onOrderStatusMessage)
        .onMessage(StopMessage.class, this::onPostStop)
        .onMessage(RequestAgentStatusResponse.class, this::onRequestAgentStatusResponse)
+       .onMessage(PingthisAgentMessage.class, this::onPingThisAgentMessage)
        .build();
     }
 
@@ -274,7 +283,8 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
             this.status = Constants.ORDER_ASSIGNED;
             agentMap.get(agentResponse.agentId).tell(new Agent.AckMessage(true,getContext().getSelf()));
             this.agentId = agentResponse.agentId;
-            for (Long agentId : waitingNotifyAgents) {
+            this.deliveryRef.tell( new Delivery.GotAgentAssignedMessage(this.orderId,this.deliveryVersion));
+            for (Long agentId : this.waitingNotifyAgents) {
 
                 deliveryRef.tell(new Delivery.ReNotifyAgentMessage(agentId, this.orderId));
 
@@ -283,18 +293,19 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         } 
         else if(this.status!= Constants.ORDER_UNASSIGNED)
         {
-            agentMap.get(agentResponse.agentId).tell(new Agent.AckMessage(false, getContext().getSelf()));
+            this.agentMap.get(agentResponse.agentId).tell(new Agent.AckMessage(false, getContext().getSelf()));
             return this;
         }
         else if (!waitingNotifyAgents.isEmpty()) {
-            agentMap.get(waitingNotifyAgents.get(0)).tell(new Agent.RequestAgentStatusMessage(getContext().getSelf()));
-            waitingNotifyAgents.remove(0);
+            this.agentMap.get(waitingNotifyAgents.get(0)).tell(new Agent.RequestAgentStatusMessage(getContext().getSelf()));
+            this.waitingNotifyAgents.remove(0);
         }
 
         else {
 
             // Iterating through Hashmap
-            for (Map.Entry<Long, ActorRef<Agent.AgentCommand>> entry : agentMap.entrySet()) {
+            this.waitingagentslock=0;
+            for (Map.Entry<Long, ActorRef<Agent.AgentCommand>> entry : this.agentMap.entrySet()) {
 
                 if ((long) entry.getKey() <= (long) agentResponse.agentId) {
                     continue;
@@ -309,5 +320,22 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         }
         return this;
 
+    }
+
+    public Behavior<FullFillOrderCommand> onPingThisAgentMessage(PingthisAgentMessage pingthisAgentMessage) {
+        if(this.status != Constants.ORDER_UNASSIGNED) {
+            this.deliveryRef.tell(new Delivery.ReNotifyAgentMessage(pingthisAgentMessage.agentId, this.orderId));
+        }
+        if(this.waitingagentslock==0) {
+            ActorRef<Agent.AgentCommand> agent = this.agentMap.get(pingthisAgentMessage.agentId);
+            agent.tell(new Agent.RequestAgentStatusMessage(getContext().getSelf()));
+            this.waitingagentslock = 1;
+        }
+        else
+        {
+            this.waitingNotifyAgents.add(pingthisAgentMessage.agentId);
+        }
+      
+        return this;
     }
 }

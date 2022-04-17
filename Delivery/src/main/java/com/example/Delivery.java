@@ -35,7 +35,8 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     HashMap<Item, Long> itemMap;
     HashMap<Long, ActorRef<Agent.AgentCommand>> agentRef;
     HashMap<Long, ActorRef<FullFillOrder.FullFillOrderCommand>> orderRef;
-    List<ActorRef<FullFillOrder.FullFillOrderCommand>> pendingOrderRef;
+    //List<ActorRef<FullFillOrder.FullFillOrderCommand>> pendingOrderRef;
+    List<Long> pendingOrderRef;
     
     Long currentOrderId = 1000L;
     Long version;
@@ -134,6 +135,25 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         }
     }
 
+    public static class GotAgentAssignedMessage implements DeliveryCommand {
+        
+        Long orderId;
+        Long version;
+
+        public GotAgentAssignedMessage(Long orderId, Long version) {
+            this.orderId = orderId;
+            this.version = version;
+        }
+
+    }
+
+    public static class AgentAvailableMessage implements DeliveryCommand {
+        Long agentId;
+        public AgentAvailableMessage(Long agentId) {
+            this.agentId = agentId;
+        }
+    }
+
     // Reply messages to the client
     public static class ClientResponse
     {
@@ -193,6 +213,8 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
        .onMessage(AgentStatusMessage.class, this::onAgentStatusMessage)
        .onMessage(ReinitializeMessage.class, this::onReinitializeMessage)
        .onMessage(OrderSuccessMessage.class, this::onOrderSuccessMessage)
+       .onMessage(GotAgentAssignedMessage.class, this::OnGotAgentAssignedMessage)
+       .onMessage(AgentAvailableMessage.class, this::onAgentAvailableMessage)
        .build();
     }
 
@@ -284,10 +306,35 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         {
             return this;
         }
-        ActorRef<FullFillOrder.FullFillOrderCommand> order = orderRef.get(orderSuccessMessage.orderId);
-        this.pendingOrderRef.add(order);
+        //ActorRef<FullFillOrder.FullFillOrderCommand> order = orderRef.get(orderSuccessMessage.orderId);
+        this.pendingOrderRef.add(orderSuccessMessage.orderId);
         System.out.println("Order waiting for agents");
         return this;
     }
+
+    public Behavior<DeliveryCommand> OnGotAgentAssignedMessage(GotAgentAssignedMessage gotAgentAssignedMessage){
+        
+        if(gotAgentAssignedMessage.version != this.version)
+        {
+            return this;
+        }
+        this.pendingOrderRef.remove(gotAgentAssignedMessage.orderId);
+        System.out.println("Removed from waiting list");
+        return this;
+    }
+
+    public Behavior<DeliveryCommand> onAgentAvailableMessage(AgentAvailableMessage agentAvailableMessage) {
+        if(!this.pendingOrderRef.isEmpty())
+        {
+            System.out.println("Prnding order references there");
+            Long orderId = this.pendingOrderRef.get(0);
+            ActorRef<FullFillOrder.FullFillOrderCommand> order = this.orderRef.get(orderId);
+            order.tell(new FullFillOrder.PingthisAgentMessage(agentAvailableMessage.agentId));;
+        }
+        System.out.println("Reached here");
+
+        return this;
+    }
+
 
 }

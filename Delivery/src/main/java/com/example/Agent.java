@@ -138,8 +138,10 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
 
         if (this.status == Constants.AGENT_SIGNED_OUT) {
             this.deliveryActor = agentSignIn.delivery;
+            System.out.println(this.deliveryActor);
             this.status = Constants.AGENT_AVAILABLE;
             this.waitingOrders.clear();
+            this.deliveryActor.tell(new Delivery.AgentAvailableMessage(agentSignIn.agentId));
         }
 
         return this;
