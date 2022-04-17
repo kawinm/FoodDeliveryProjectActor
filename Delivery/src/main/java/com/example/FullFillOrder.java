@@ -33,6 +33,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     Long orderId;
     Order order;
     int status;
+    Long agentId=-1l;
     HashMap<Item, Long> itemMap;
     HashMap<Long, ActorRef<Agent.AgentCommand>> agentMap;
     
@@ -74,7 +75,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         }
     }
     
-    public static class InitiateOrder implements FullFillOrderCommand{
+    public static class InitiateOrder implements FullFillOrderCommand {
 
     }
 
@@ -114,6 +115,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         this.agentMap = agentMap;
         this.waitingNotifyAgents = new ArrayList<Long>();
         this.deliveryRef = deliveryRef;
+        this.agentId=-1l;
     }
 
     // Create method to spawn an actor
@@ -215,7 +217,7 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         }        
         System.out.println("Order request accepted");
         this.status = Constants.ORDER_UNASSIGNED;
-
+        this.deliveryRef.tell(new Delivery.OrderSuccessMessage(this.deliveryVersion, this.orderId));
         // Iterating through Hashmap
         for (Map.Entry<Long, ActorRef<Agent.AgentCommand>> entry : agentMap.entrySet()) {
 
@@ -238,16 +240,16 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
         
         OrderStatus statusResponse;
         if (status == Constants.ORDER_ASSIGNED) {
-            statusResponse = new OrderStatus(orderId, "assigned",-1l);
+            statusResponse = new OrderStatus(orderId, "assigned",this.agentId);
         }
         else if (status == Constants.ORDER_UNASSIGNED) {
-            statusResponse = new OrderStatus(orderId, "unassigned",-1l);
+            statusResponse = new OrderStatus(orderId, "unassigned",this.agentId);
         }
         else if(status == Constants.ORDER_DELIVERED){
-            statusResponse = new OrderStatus(orderId, "delivered",-1l);
+            statusResponse = new OrderStatus(orderId, "delivered",this.agentId);
         }
         else {
-            statusResponse = new OrderStatus(orderId,"rejected",-1l);
+            statusResponse = new OrderStatus(orderId,"rejected",this.agentId);
         }
         orderStatus.client.tell(new ClientStatusResponse(true, statusResponse));
         return this;
@@ -262,24 +264,31 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     public Behavior<FullFillOrderCommand> onRequestAgentStatusResponse(RequestAgentStatusResponse agentResponse) {
 
         if (agentResponse.agentStatus == Constants.AGENT_AVAILABLE) {
-            this.status = Constants.ORDER_ASSIGNED;
             
-            agentMap.get(agentResponse.agentId).tell(new Agent.AckMessage(getContext().getSelf()));
+            if(this.status != Constants.ORDER_UNASSIGNED)
+            {
+                agentMap.get(agentResponse.agentId).tell(new Agent.AckMessage(false, getContext().getSelf()));
+                return this;
+            }
 
+            this.status = Constants.ORDER_ASSIGNED;
+            agentMap.get(agentResponse.agentId).tell(new Agent.AckMessage(true,getContext().getSelf()));
+            this.agentId = agentResponse.agentId;
             for (Long agentId : waitingNotifyAgents) {
 
                 deliveryRef.tell(new Delivery.ReNotifyAgentMessage(agentId, this.orderId));
 
             }
+            this.waitingNotifyAgents.clear();
         } 
-
+        else if(this.status!= Constants.ORDER_UNASSIGNED)
+        {
+            agentMap.get(agentResponse.agentId).tell(new Agent.AckMessage(false, getContext().getSelf()));
+            return this;
+        }
         else if (!waitingNotifyAgents.isEmpty()) {
-
-
             agentMap.get(waitingNotifyAgents.get(0)).tell(new Agent.RequestAgentStatusMessage(getContext().getSelf()));
-
             waitingNotifyAgents.remove(0);
-
         }
 
         else {

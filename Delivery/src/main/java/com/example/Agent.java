@@ -24,6 +24,7 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     // Define members 
     Long agentId;
     int status;
+    ActorRef<Delivery.DeliveryCommand> deliveryActor;
 
     int SignOutLock;
 
@@ -39,9 +40,10 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     public static class AgentSignInMessage implements AgentCommand { 
 
         Long agentId;
-
-        public AgentSignInMessage(Long agentId) {
+        ActorRef<Delivery.DeliveryCommand> delivery;
+        public AgentSignInMessage(Long agentId, ActorRef<Delivery.DeliveryCommand> dRef) {
             this.agentId = agentId;
+            this.delivery = dRef;
         }
     }
 
@@ -80,9 +82,11 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     // Acknowledge Agent Assignment Message (From FFO)
     public static class AckMessage implements AgentCommand { 
         
+        boolean ack;
         ActorRef<FullFillOrder.FullFillOrderCommand> order;
 
-        public AckMessage(ActorRef<FullFillOrder.FullFillOrderCommand> order) {
+        public AckMessage(boolean ack,ActorRef<FullFillOrder.FullFillOrderCommand> order) {
+            this.ack = ack;
             this.order = order;
         }
     }
@@ -106,6 +110,7 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
         this.status = status;
         this.SignOutLock = 0;
         this.waitingOrders = new ArrayList<ActorRef<FullFillOrder.FullFillOrderCommand>>();
+        this.deliveryActor = null;
     }
 
     // Create method to spawn an actor
@@ -132,7 +137,9 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     public Behavior<AgentCommand> onAgentSignInMessage(AgentSignInMessage agentSignIn) {
 
         if (this.status == Constants.AGENT_SIGNED_OUT) {
+            this.deliveryActor = agentSignIn.delivery;
             this.status = Constants.AGENT_AVAILABLE;
+            this.waitingOrders.clear();
         }
 
         return this;
@@ -141,10 +148,15 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
      // Define Signal Handler for Agent SignOut Message
     public Behavior<AgentCommand> onAgentSignOutMessage(AgentSignOutMessage agentSignOut) {
 
-        this.SignOutLock = 0;
-
+        if(this.assignmentLock==1)
+        {
+                this.SignOutLock = 1;
+                return this;
+        }
         // *** Verify ***
-        this.status = Constants.AGENT_SIGNED_OUT;
+        if(this.status==Constants.AGENT_AVAILABLE) {
+            this.status = Constants.AGENT_SIGNED_OUT;
+        }
 
         System.out.println(agentSignOut.agentId);
         return this;
@@ -190,13 +202,36 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
 
     public Behavior<AgentCommand> onAckMessage(AckMessage ackOrder) {
         
-        this.status = Constants.AGENT_UNAVAILABLE;
-        this.assignmentLock = 0;
-
-        for (ActorRef<FullFillOrder.FullFillOrderCommand> orders: this.waitingOrders) {
-            orders.tell(new FullFillOrder.RequestAgentStatusResponse(this.agentId, this.status));
-
+        if(ackOrder.ack==true)
+        {
+            this.status = Constants.AGENT_UNAVAILABLE;
+            this.assignmentLock = 0;
+            this.SignOutLock=0;
+            for (ActorRef<FullFillOrder.FullFillOrderCommand> orders: this.waitingOrders) {
+                orders.tell(new FullFillOrder.RequestAgentStatusResponse(this.agentId, this.status));
+    
+            }
+            this.waitingOrders.clear();
         }
+        else
+        {
+            if(!this.waitingOrders.isEmpty())
+            {
+                ActorRef<FullFillOrder.FullFillOrderCommand> order = this.waitingOrders.get(0);
+                this.waitingOrders.remove(0);
+                order.tell(new FullFillOrder.RequestAgentStatusResponse(this.agentId, this.status));
+            }
+            else
+            {
+                if(this.SignOutLock==1)
+                {
+                    this.status= Constants.AGENT_SIGNED_OUT;
+                    this.SignOutLock=0;
+                }
+                this.assignmentLock=0;
+            }
+        }
+       
 
         return this;
     }

@@ -11,7 +11,9 @@ import akka.actor.typed.ActorSystem;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.CompletionStage;
 
@@ -47,7 +49,7 @@ public class QuickstartApp {
             Scanner sc = new Scanner(file);
             HashMap<Long,ActorRef<Agent.AgentCommand>> agentRefs = new HashMap<>();
             HashMap<Item, Long> itemMap = new HashMap<>();
-            
+            List<Long> agentIds = new ArrayList<>();
 
             int count = 0;
             while (sc.hasNextLine()) {
@@ -81,6 +83,7 @@ public class QuickstartApp {
                 }
                 if (count == 1) {
                     Long agentId = Long.parseLong(str);
+                    agentIds.add(agentId);
                     ActorRef<Agent.AgentCommand> agentActor = context.spawn(Agent.create(agentId, Constants.AGENT_SIGNED_OUT), "agent_"+agentId);
                     agentRefs.put(agentId,agentActor);
                 }

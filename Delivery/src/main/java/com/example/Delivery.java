@@ -215,7 +215,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         ActorRef<Agent.AgentCommand> currentAgent = agentRef.get(agentSignIn.agentId); 
 
         // SignIn Message send
-        currentAgent.tell(new Agent.AgentSignInMessage(agentSignIn.agentId));
+        currentAgent.tell(new Agent.AgentSignInMessage(agentSignIn.agentId,getContext().getSelf()));
         agentSignIn.client.tell(new ClientResponse("Agent" + agentSignIn.agentId + " signed in"));
         System.out.println(agentSignIn.agentId);
         return this;
