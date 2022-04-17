@@ -106,6 +106,13 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
         
     }
 
+    public static class StopMessage implements AgentCommand {
+
+        public StopMessage() {
+
+        }
+    }
+
     //Constructor
     public Agent(ActorContext<AgentCommand> context, Long agentId, int status) {
         super(context);
@@ -132,6 +139,7 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
        .onMessage(RequestAgentStatusMessage.class, this::onRequestAgentStatusMessage)
        .onMessage(AckMessage.class, this::onAckMessage)
        .onMessage(FreeAgentMessage.class,this::onFreeAgentMessage)
+       .onMessage(StopMessage.class, this::onPostStop)
        .build();
     }
 
@@ -246,5 +254,10 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
         this.status = Constants.AGENT_AVAILABLE;
         this.deliveryActor.tell(new Delivery.AgentAvailableMessage(this.agentId));
         return this;
+    }
+
+    public Behavior<AgentCommand> onPostStop(StopMessage stopMessage) {
+        getContext().getSystem().log().info("Master Control Program stopped");
+        return Behaviors.stopped();
     }
 }
