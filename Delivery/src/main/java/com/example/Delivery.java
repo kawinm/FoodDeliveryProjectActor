@@ -215,6 +215,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
        .onMessage(OrderSuccessMessage.class, this::onOrderSuccessMessage)
        .onMessage(GotAgentAssignedMessage.class, this::OnGotAgentAssignedMessage)
        .onMessage(AgentAvailableMessage.class, this::onAgentAvailableMessage)
+       .onMessage(ReNotifyAgentMessage.class, this::onRenotifyAgentMesssage)
        .build();
     }
 
@@ -260,6 +261,8 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     public Behavior<DeliveryCommand> onOrderDeliveredMessage(OrderDeliveredMessage orderDelivered) {
 
         System.out.println(orderDelivered.orderId);
+        ActorRef<FullFillOrder.FullFillOrderCommand> order = this.orderRef.get(orderDelivered.orderId);
+        order.tell(new FullFillOrder.OrderDeliveredMessage(orderDelivered.orderId));
         orderDelivered.client.tell(new ClientResponse("Order Delivered"));
         return this;
      }
@@ -326,13 +329,25 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
     public Behavior<DeliveryCommand> onAgentAvailableMessage(AgentAvailableMessage agentAvailableMessage) {
         if(!this.pendingOrderRef.isEmpty())
         {
-            System.out.println("Prnding order references there");
+            System.out.println("Pending order references there");
             Long orderId = this.pendingOrderRef.get(0);
             ActorRef<FullFillOrder.FullFillOrderCommand> order = this.orderRef.get(orderId);
-            order.tell(new FullFillOrder.PingthisAgentMessage(agentAvailableMessage.agentId));;
+            order.tell(new FullFillOrder.PingthisAgentMessage(agentAvailableMessage.agentId));
         }
         System.out.println("Reached here");
 
+        return this;
+    }
+
+    public Behavior<DeliveryCommand> onRenotifyAgentMesssage(ReNotifyAgentMessage reNotifyAgentMessage) {
+        if(!this.pendingOrderRef.isEmpty()) {
+            this.pendingOrderRef.remove(reNotifyAgentMessage.orderId);
+            if(! this.pendingOrderRef.isEmpty()) {
+                Long orderId = this.pendingOrderRef.get(0);
+                ActorRef<FullFillOrder.FullFillOrderCommand> order = this.orderRef.get(orderId);
+                order.tell(new FullFillOrder.PingthisAgentMessage(reNotifyAgentMessage.agentId));
+            }
+        }
         return this;
     }
 

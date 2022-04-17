@@ -102,6 +102,9 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
         }
     }
   
+    public static class FreeAgentMessage implements AgentCommand{
+        
+    }
 
     //Constructor
     public Agent(ActorContext<AgentCommand> context, Long agentId, int status) {
@@ -128,6 +131,7 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
        .onMessage(GetAgentStatusMessage.class, this::onGetAgentStatusMessage)
        .onMessage(RequestAgentStatusMessage.class, this::onRequestAgentStatusMessage)
        .onMessage(AckMessage.class, this::onAckMessage)
+       .onMessage(FreeAgentMessage.class,this::onFreeAgentMessage)
        .build();
     }
 
@@ -235,6 +239,12 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
         }
        
 
+        return this;
+    }
+
+    public Behavior<AgentCommand> onFreeAgentMessage(FreeAgentMessage freeAgentMessage) {
+        this.status = Constants.AGENT_AVAILABLE;
+        this.deliveryActor.tell(new Delivery.AgentAvailableMessage(this.agentId));
         return this;
     }
 }

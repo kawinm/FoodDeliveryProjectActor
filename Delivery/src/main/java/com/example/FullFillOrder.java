@@ -5,6 +5,7 @@ import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.Receive;
 import akka.japi.pf.ReceiveBuilder;
+import akka.stream.impl.ActorRefSinkStage;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.PostStop;
@@ -240,7 +241,13 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
     // Define Message and Signal Handler for Order Delivered Message
     public Behavior<FullFillOrderCommand> onOrderDeliveredMessage(OrderDeliveredMessage orderDelivered) {
 
-        System.out.println(orderDelivered.orderId);
+        if(this.status!=Constants.ORDER_ASSIGNED) {
+            return this;
+        }
+        this.status = Constants.ORDER_DELIVERED;
+        ActorRef<Agent.AgentCommand> agent = this.agentMap.get(this.agentId);
+        agent.tell(new Agent.FreeAgentMessage());
+        //System.out.println(orderDelivered.orderId);
         return this;
      }
 
@@ -290,10 +297,12 @@ public class FullFillOrder extends AbstractBehavior<FullFillOrder.FullFillOrderC
 
             }
             this.waitingNotifyAgents.clear();
+            this.waitingagentslock = 0;
         } 
         else if(this.status!= Constants.ORDER_UNASSIGNED)
         {
             this.agentMap.get(agentResponse.agentId).tell(new Agent.AckMessage(false, getContext().getSelf()));
+            this.waitingagentslock = 0;
             return this;
         }
         else if (!waitingNotifyAgents.isEmpty()) {
