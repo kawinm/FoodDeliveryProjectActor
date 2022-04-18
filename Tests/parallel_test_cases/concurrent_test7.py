@@ -93,7 +93,7 @@ def test():
 
     ### Parallel Execution Ends ###
     # Sleep for some moments so that effects are propogated properly
-    sleep(6)
+    sleep(7)
     # Check the status codes of requests.
     if (result["1"].status_code != HTTPStatus.CREATED or result["2"].status_code != HTTPStatus.CREATED ) :
         return "Fail4"

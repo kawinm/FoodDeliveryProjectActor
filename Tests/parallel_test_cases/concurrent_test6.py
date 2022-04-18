@@ -93,7 +93,7 @@ def test():
     thread2.join()
 
     ### Parallel Execution Ends ###
-    sleep(6)
+    sleep(7)
     if (result["1"].status_code != HTTPStatus.CREATED or result["2"].status_code != HTTPStatus.CREATED ) :
         return Fail
 

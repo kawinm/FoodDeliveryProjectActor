@@ -99,7 +99,7 @@ def test():
             # Try for 20 times until a failure occurs.
             if(count==20):
                 break
-            sleep(1)
+            sleep(2)
         
 
     return Fail

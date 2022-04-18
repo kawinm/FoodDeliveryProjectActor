@@ -67,18 +67,22 @@ def test():
 
     ### Parallel Execution Ends ###
 
+    # Continue until the agent gets assigned to an order
     while True:
         http_response = requests.get("http://localhost:8081/agent/201")
         status = http_response.json().get("status")
         if status == "unavailable":
             break
 
+    # Get the Order Id and status 
     order_id1 = result["1"].json().get("orderId")
     status_code1 = result["1"].status_code
 
+    # Get the order id and status
     order_id2 = result["2"].json().get("orderId")
     status_code2 = result["2"].status_code
 	
+    # The status codes of both the requests should match
     if (status_code1 != status_code2 and status_code2 != HTTPStatus.CREATED) or order_id1 == order_id2:
         return "Fail2"
 
@@ -103,9 +107,12 @@ def test():
     agent_id2 = res_body.get("agentId")
     order_status2 = res_body.get("status")
 
+    # Out of the order statuse one should be assigned while the 
+    # other is unassigned.
     if((order_status1 == 'assigned' and order_status2 == 'assigned') or (order_status1 == 'unassigned' and order_status2 == 'unassigned')):
         return 'Fail4'
 
+    # Only the order which got assigned must have an agentId
     if((agent_id1 == 201 and agent_id2 == 201) or (agent_id1 == -1 and agent_id2 == -1)):
         return 'Fail5'
 
