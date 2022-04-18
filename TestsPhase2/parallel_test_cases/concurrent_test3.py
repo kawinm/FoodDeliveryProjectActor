@@ -1,5 +1,6 @@
 from collections import defaultdict
 from http import HTTPStatus
+from os import stat
 from threading import Thread
 import requests
 
@@ -7,8 +8,8 @@ import requests
 # Scenario:
 #   Check if a parallel sequence of 5 requests
 #   3 requestOrders and 2 AgentSignIn Requests are consistent.
-#   
-#
+#   One of 3 orders will remain unassigned while the others are assigned 
+#   agents.
 
 # RESTAURANT SERVICE    : http://localhost:8080
 # DELIVERY SERVICE      : http://localhost:8081
@@ -118,9 +119,20 @@ def test():
     
     orderstatuses = defaultdict(lambda: 0)
 
+    http_response = requests.get(f"http://localhost:8081/order/1000")
+    status = http_response.json().get("status")
+    orderstatuses[status] +=1
+    http_response = requests.get(f"http://localhost:8081/order/1001")
+    status = http_response.json().get("status")
+    orderstatuses[status] +=1
+    http_response = requests.get(f"http://localhost:8081/order/1002")
+    status = http_response.json().get("status")
+    orderstatuses[status]+=1
 
-
-
+    if(orderstatuses["assigned"]==2 and orderstatuses["unassigned"]==1):
+        return Pass
+    else:
+        return Fail
     return 'Pass'
 
 
