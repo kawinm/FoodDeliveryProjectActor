@@ -135,6 +135,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
             this.orderId = orderId;
         }
     }
+
     // Message sent by a FullFillOrder Actor when he gets an agent assigned to him.
     public static class GotAgentAssignedMessage implements DeliveryCommand {
         
@@ -147,6 +148,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         }
 
     }
+
     // Message sent to the delivery when an agent becomes available
     public static class AgentAvailableMessage implements DeliveryCommand {
         Long agentId;
@@ -167,6 +169,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
             this.response = response;
         }
     }
+
     // Response given as a result of call to enpoint /requestOrder
     public static class RequestOrderResponse
     {
@@ -227,7 +230,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
        .build();
     }
 
-    // Define Message and Signal Handlers
+    /* Define Message and Signal Handlers */
   
     // Define Signal Handler for Request Order Message
     public Behavior<DeliveryCommand> onRequestOrderMessage(RequestOrderMessage requestOrder) {
@@ -298,38 +301,44 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         return this;
      }
 
-    // Define Signal Handler for Order status Message
+    // Define Signal Handler for Reinitialize Message
     public Behavior<DeliveryCommand> onReinitializeMessage(ReinitializeMessage reinit) {
 
         for (Long orderId = 1000L; orderId < currentOrderId; orderId++) {
             orderRef.get(orderId).tell(new FullFillOrder.StopMessage());
             orderRef.remove(orderId);
         }
+
         this.orderRef.clear();
-        for(int i=0;i<agentsList.size();++i) {
+        for(int i=0; i<agentsList.size(); ++i) {
             ActorRef<Agent.AgentCommand> agent = this.agentRef.get(this.agentsList.get(i));
             agent.tell(new Agent.StopMessage());
         }
+
         this.agentRef.clear();
         this.pendingOrderRef.clear();
         this.version +=1;
         currentOrderId = 1000L;
-        reinit.client.tell(new ClientResponse(""));
 
-        for(int i=0;i<this.agentsList.size();++i) { 
+        for(int i=0; i<this.agentsList.size(); ++i) { 
             Long agentId = this.agentsList.get(i);
             ActorRef<Agent.AgentCommand> agent = getContext().spawn(Agent.create(agentId,Constants.AGENT_SIGNED_OUT,this.version), "agent_v_"+this.version + "_" +agentId);
             
             this.agentRef.put(agentId, agent);
         }
+
+        reinit.client.tell(new ClientResponse(""));
+
         return this;
      }
 
+     // Message Handler for Order Success Message
     public Behavior<DeliveryCommand> onOrderSuccessMessage(OrderSuccessMessage orderSuccessMessage) {
-        if(orderSuccessMessage.version!= this.version)
-        {
+        
+        if(orderSuccessMessage.version != this.version) {
             return this;
         }
+
         //ActorRef<FullFillOrder.FullFillOrderCommand> order = orderRef.get(orderSuccessMessage.orderId);
         this.pendingOrderRef.add(orderSuccessMessage.orderId);
         System.out.println("Order waiting for agents");
@@ -338,21 +347,22 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
 
     public Behavior<DeliveryCommand> OnGotAgentAssignedMessage(GotAgentAssignedMessage gotAgentAssignedMessage){
         
-        if(gotAgentAssignedMessage.version != this.version)
-        {
+        if(gotAgentAssignedMessage.version != this.version) {
             return this;
         }
+
         this.pendingOrderRef.remove(gotAgentAssignedMessage.orderId);
         System.out.println("Removed from waiting list");
         return this;
     }
 
     public Behavior<DeliveryCommand> onAgentAvailableMessage(AgentAvailableMessage agentAvailableMessage) {
+
         if(agentAvailableMessage.version != this.version) {
             return  this;
         }
-        if(!this.pendingOrderRef.isEmpty())
-        {
+
+        if(!this.pendingOrderRef.isEmpty()) {
             System.out.println("Pending order references there");
             Long orderId = this.pendingOrderRef.get(0);
             ActorRef<FullFillOrder.FullFillOrderCommand> order = this.orderRef.get(orderId);
@@ -365,17 +375,21 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
 
     public Behavior<DeliveryCommand> onRenotifyAgentMesssage(ReNotifyAgentMessage reNotifyAgentMessage) {
 
-        if(reNotifyAgentMessage.version != this.version) {
+        if (reNotifyAgentMessage.version != this.version) {
             return this;
         }
-        if(!this.pendingOrderRef.isEmpty()) {
+
+        if (!this.pendingOrderRef.isEmpty()) {
+
             this.pendingOrderRef.remove(reNotifyAgentMessage.orderId);
+
             if(! this.pendingOrderRef.isEmpty()) {
                 Long orderId = this.pendingOrderRef.get(0);
                 ActorRef<FullFillOrder.FullFillOrderCommand> order = this.orderRef.get(orderId);
                 order.tell(new FullFillOrder.PingthisAgentMessage(reNotifyAgentMessage.agentId));
             }
         }
+
         return this;
     }
 

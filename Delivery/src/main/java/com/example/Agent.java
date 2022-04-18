@@ -98,8 +98,7 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
     public static class GetAgentStatusResponse {
         AgentStatus agentStatus;
         
-        public GetAgentStatusResponse(AgentStatus agentStatus)
-        {
+        public GetAgentStatusResponse(AgentStatus agentStatus) {
             this.agentStatus = agentStatus;
         }
     }
@@ -147,7 +146,7 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
        .build();
     }
 
-    // Define Message and Signal Handlers
+    /* Define Message and Signal Handlers */
   
     // Define Signal Handler for Agent SignIn Message
     public Behavior<AgentCommand> onAgentSignInMessage(AgentSignInMessage agentSignIn) {
@@ -166,13 +165,12 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
      // Define Signal Handler for Agent SignOut Message
     public Behavior<AgentCommand> onAgentSignOutMessage(AgentSignOutMessage agentSignOut) {
 
-        if(this.assignmentLock==1)
-        {
-                this.SignOutLock = 1;
-                return this;
+        if (this.assignmentLock == 1) {
+            this.SignOutLock = 1;
+            return this;
         }
-        // *** Verify ***
-        if(this.status==Constants.AGENT_AVAILABLE) {
+
+        if (this.status == Constants.AGENT_AVAILABLE) {
             this.status = Constants.AGENT_SIGNED_OUT;
         }
 
@@ -183,19 +181,17 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
      // Define Signal Handler for Agent Status Message
     public Behavior<AgentCommand> onGetAgentStatusMessage(GetAgentStatusMessage getAgentStatus) {
         AgentStatus agentStatus = new AgentStatus(this.agentId);
-        if(this.status == Constants.AGENT_SIGNED_OUT)
-        {
+        
+        if(this.status == Constants.AGENT_SIGNED_OUT) {
             agentStatus.setStatus("signed-out");
         }
-        else if(this.status == Constants.AGENT_AVAILABLE)
-        {
+        else if(this.status == Constants.AGENT_AVAILABLE) {
             agentStatus.setStatus("available");
         }
-        else
-        {
+        else {
             agentStatus.setStatus("unavailable");
-
         }
+
         getAgentStatus.agentStatusResponse.tell(new GetAgentStatusResponse(agentStatus));
         return this;
      }
@@ -220,37 +216,32 @@ public class Agent extends AbstractBehavior<Agent.AgentCommand> {
 
     public Behavior<AgentCommand> onAckMessage(AckMessage ackOrder) {
         
-        if(ackOrder.ack==true)
-        {
+        if (ackOrder.ack == true) {
             this.status = Constants.AGENT_UNAVAILABLE;
             this.assignmentLock = 0;
-            this.SignOutLock=0;
+            this.SignOutLock = 0;
+
             for (ActorRef<FullFillOrder.FullFillOrderCommand> orders: this.waitingOrders) {
                 orders.tell(new FullFillOrder.RequestAgentStatusResponse(this.agentId, this.status));
     
             }
             this.waitingOrders.clear();
         }
-        else
-        {
-            if(!this.waitingOrders.isEmpty())
-            {
+        else {
+            if (!this.waitingOrders.isEmpty())  {
                 ActorRef<FullFillOrder.FullFillOrderCommand> order = this.waitingOrders.get(0);
                 this.waitingOrders.remove(0);
                 order.tell(new FullFillOrder.RequestAgentStatusResponse(this.agentId, this.status));
             }
-            else
-            {
-                if(this.SignOutLock==1)
-                {
+            else {
+                if(this.SignOutLock == 1) {
                     this.status= Constants.AGENT_SIGNED_OUT;
-                    this.SignOutLock=0;
+                    this.SignOutLock = 0;
                 }
                 this.assignmentLock=0;
             }
         }
        
-
         return this;
     }
 
