@@ -35,6 +35,7 @@ def test():
         "itemId" : 1,
         "qty" : 1
     })
+
     # Check status
     if(http_response.status_code != HTTPStatus.CREATED):
         return Fail
@@ -58,7 +59,7 @@ def test():
 
     # Check the orderId
     orderId2 = http_response.json().get("orderId")
-    if(orderId2!=1001):
+    if(orderId2 != 1001):
         return Fail
 
     # Customer 301 makes an order
@@ -68,13 +69,14 @@ def test():
         "itemId" : 2,
         "qty" : 1
     })
+
     # Check the status of the request
     if(http_response.status_code != HTTPStatus.CREATED):
         return Fail
     
     # Check the orderId 
     orderId3 = http_response.json().get("orderId")
-    if(orderId3!=1002):
+    if(orderId3 != 1002):
         return Fail
 
     orders = [orderId1,orderId2,orderId3]
@@ -93,6 +95,7 @@ def test():
     http_response = requests.post("http://localhost:8081/agentSignIn",json={
         "agentId" : 201,
     }) 
+    
     if(http_response.status_code != HTTPStatus.CREATED):
         return Fail
 
