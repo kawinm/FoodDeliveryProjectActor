@@ -135,7 +135,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
             this.orderId = orderId;
         }
     }
-
+    // Message sent by a FullFillOrder Actor when he gets an agent assigned to him.
     public static class GotAgentAssignedMessage implements DeliveryCommand {
         
         Long orderId;
@@ -147,7 +147,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         }
 
     }
-
+    // Message sent to the delivery when an agent becomes available
     public static class AgentAvailableMessage implements DeliveryCommand {
         Long agentId;
         Long version;
@@ -311,6 +311,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
             agent.tell(new Agent.StopMessage());
         }
         this.agentRef.clear();
+        this.pendingOrderRef.clear();
         this.version +=1;
         currentOrderId = 1000L;
         reinit.client.tell(new ClientResponse(""));
