@@ -1,17 +1,17 @@
+from collections import defaultdict
 from http import HTTPStatus
+import http
 from os import stat
 import requests
-from time import sleep
 
-#  Check if a customer can make an order to a restaurant
-#  after certain amounts of money gets credited to his wallet.
+# Check if only one agent gets assigned to an order when there is one pending order
+# and there are two agents which are available
 
 Pass = 'Pass'
 Fail = 'Fail'
 
 def test():
     test_result = Pass
-
     '''
         Reinitialize all the servies.
     '''
@@ -25,22 +25,6 @@ def test():
     if(http_response.status_code != HTTPStatus.CREATED):
         return Fail
 
-    #Get the initial Balance of the customer 301
-    http_response = requests.get("http://localhost:8082/balance/301")
-    if(http_response.status_code!=HTTPStatus.OK):
-        return Fail
-    
-    balance = http_response.json().get("balance")
-
-    # Deplete the balance of customer 301.
-    http_response = requests.post("http://localhost:8082/deductBalance",json={
-        "custId" : 301,
-        "amount" : balance
-    })
-    if(http_response.status_code != HTTPStatus.CREATED):
-        return Fail
-    
-
     # Let customer 301 make an order with insufficient balance.
     http_response = requests.post("http://localhost:8081/requestOrder",json={
         "custId" : 301,
@@ -49,60 +33,46 @@ def test():
         "qty" : 1
     })
     if(http_response.status_code != HTTPStatus.CREATED):
-        return Fail
+        return "Fail1"
     
     orderId = http_response.json().get("orderId")
-    
-    # Retry 5 times until the order status becomes rejected
-    # If its not in rejected status return a Fail
-    count = 0
+
+    # Agent 201 Signs In
+    http_response = requests.post("http://localhost:8081/agentSignIn",json={
+        "agentId" : 201,
+    }) 
+    if(http_response.status_code != HTTPStatus.CREATED):
+        return "Fail2"
+
+    # Agent 202 signs in
+    http_response = requests.post("http://localhost:8081/agentSignIn",json={
+        "agentId" : 202,
+    }) 
+    if(http_response.status_code != HTTPStatus.CREATED):
+        return "Fail3"
+
+    # Iterate through the loop until the order gets assigned an agent.
     while True:
         http_response = requests.get(f"http://localhost:8081/order/{orderId}")
         status = http_response.json().get("status")
-        if(status=="rejected"):
+        if(status!="unassigned" and status!="assigned"):
+            return "Fail4"
+        if(status=="assigned"):
             break
-        else:
-            if(count==5):
-                return Fail
-            sleep(2)
-            count+=1
     
+    agent_statuses_count = defaultdict(lambda: 0)
+    http_response = requests.get(f"http://localhost:8081/agent/201")
+    status = http_response.json().get("status")
+    agent_statuses_count[status]+=1
 
-    # Add some balance to the customer 301
-    http_response = requests.post("http://localhost:8082/addBalance",json={
-        "custId" : 301,
-        "amount" : balance
-    })
-    if(http_response.status_code != HTTPStatus.CREATED):
-        return Fail
+    http_response = requests.get(f"http://localhost:8081/agent/202")
+    status = http_response.json().get("status")
+    agent_statuses_count[status]+=1
 
-    # Let customer 301 make an order with sufficient balance.
-    http_response = requests.post("http://localhost:8081/requestOrder",json={
-        "custId" : 301,
-        "restId" : 101,
-        "itemId" : 1,
-        "qty" : 1
-    })
-    if(http_response.status_code != HTTPStatus.CREATED):
-        test_result = "Fail5"
-    
-    orderId = http_response.json().get("orderId")
-
-    count = 0
-    while True:
-        http_response = requests.get(f"http://localhost:8081/order/{orderId}")
-        status = http_response.json().get("status")
-        if(status!="unassigned"):
-            return "Fail"
-        else:
-            if(count==5):
-                return Pass
-            sleep(2)
-            count+=1
-    
-
-    return Pass
-
+    if(agent_statuses_count["unavailable"]==1 and agent_statuses_count["available"]==1):
+        return Pass
+    else:
+        return "Fail5"
 
 
 if __name__ == "__main__":

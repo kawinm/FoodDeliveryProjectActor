@@ -7,6 +7,7 @@ com/example/models/OrderStatus.class
 com/example/DeliveryRoutes.class
 com/example/models/Order.class
 com/example/Delivery$OrderStatusMessage.class
+com/example/FullFillOrder$PingthisAgentMessage.class
 com/example/Constants.class
 com/example/Delivery$AgentSignInMessage.class
 com/example/QuickstartApp.class
@@ -26,12 +27,16 @@ com/example/FullFillOrder$ClientStatusResponse.class
 com/example/Agent$AckMessage.class
 com/example/models/OrderIdResponse.class
 com/example/FullFillOrder$OrderStatusMessage.class
+com/example/Agent$StopMessage.class
 com/example/FullFillOrder$OrderDeliveredMessage.class
 com/example/FullFillOrder$StopMessage.class
 com/example/models/AgentStatus.class
 com/example/FullFillOrder$FullFillOrderCommand.class
 com/example/FullFillOrder$RequestAgentStatusResponse.class
+com/example/Delivery$AgentAvailableMessage.class
 com/example/Agent.class
 com/example/models/Item.class
 com/example/Delivery$RequestOrderMessage.class
 com/example/Delivery$OrderDeliveredMessage.class
+com/example/Delivery$GotAgentAssignedMessage.class
+com/example/Agent$FreeAgentMessage.class
