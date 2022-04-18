@@ -1,4 +1,4 @@
-Compile and run the program in the usual way, i.e., using "mvn compile" and "mvn exec:java".
+Compile and run the program in the usual way, i.e., using "mvn compile" and "mvn exec:java". -Dexec.args="./initialData.txt"
 
 Then run the following sample commands to test the system:
 
