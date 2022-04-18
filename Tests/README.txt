@@ -8,14 +8,14 @@ Steps to run the test cases
                 pip3 install requests 
                         OR  
                 pip install requests
-
+        2. collections
 
     To run concurrent test cases all at once
         1. python3 run_all_tests.py
                 OR
            python run_all_tests.py
 
-    To run Individual concurrent test cases
+    To run Individual test cases
         1. python3 <filename>.py
                 OR
            python <filename.py>
