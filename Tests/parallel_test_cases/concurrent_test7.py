@@ -75,6 +75,7 @@ def test():
         if(status=="unavailable"):
             break
     
+    # The agent assigned to the order with id 1000 must be 201
     http_response = requests.get("http://localhost:8081/order/1000")
     agentAssigned = http_response.json().get("agentId")
     if(agentAssigned!=201):

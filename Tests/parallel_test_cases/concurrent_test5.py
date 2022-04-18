@@ -75,6 +75,7 @@ def test():
     if(status!="available"):
         return Fail
     
+    # The status of the order must be rejected.
     http_response = requests.get("http://localhost:8081/order/1000")
     status = http_response.json().get("status")
     if(status != "rejected"):

@@ -117,8 +117,10 @@ def test():
         if(agent201_status==agent202_status and agent201_status=="unavailable"):
                 break
     
+    # Check all orderstatuses 
+    # Count the number of orders belonging to a particular order status.
+    # only 2 should ideally be assigned while the remaining one unassigned
     orderstatuses = defaultdict(lambda: 0)
-
     http_response = requests.get(f"http://localhost:8081/order/1000")
     status = http_response.json().get("status")
     orderstatuses[status] +=1

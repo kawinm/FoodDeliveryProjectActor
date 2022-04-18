@@ -99,7 +99,10 @@ def test():
         if(status=="assigned"):
             break
         
-        
+    
+    # Get the agent statuses.
+    # Count the number of agents having each agent status
+    
     agent_statues = defaultdict(lambda:0)  
     http_response = requests.get(f"http://localhost:8081/agent/201")
     status = http_response.json().get("status")
