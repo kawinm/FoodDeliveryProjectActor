@@ -237,6 +237,8 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
 
         ActorRef<FullFillOrder.FullFillOrderCommand> orderActor = getContext().spawn(FullFillOrder.create(this.version, currentOrderId, requestOrder.order, Constants.ORDER_UNASSIGNED, itemMap, agentRef, getContext().getSelf()), "order_v_"+ this.version +"_"+currentOrderId);
         requestOrder.client.tell(new RequestOrderResponse(new OrderIdResponse(currentOrderId)));
+        // Added to Pending Order References
+        this.pendingOrderRef.add(currentOrderId);
         orderRef.put(currentOrderId++, orderActor);
         //System.out.println(requestOrder.order.getCustId());
         orderActor.tell(new FullFillOrder.InitiateOrder());
@@ -340,7 +342,7 @@ public class Delivery extends AbstractBehavior<Delivery.DeliveryCommand> {
         }
 
         //ActorRef<FullFillOrder.FullFillOrderCommand> order = orderRef.get(orderSuccessMessage.orderId);
-        this.pendingOrderRef.add(orderSuccessMessage.orderId);
+        // this.pendingOrderRef.add(orderSuccessMessage.orderId);
         System.out.println("Order waiting for agents");
         return this;
     }
